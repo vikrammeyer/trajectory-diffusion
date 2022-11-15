@@ -1,0 +1,8 @@
+jupyter
+matplotlib==3.3.4
+numpy==1.22.0
+pandas
+scikit-learn
+torch
+tqdm
+accelerate
