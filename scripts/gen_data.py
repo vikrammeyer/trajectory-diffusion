@@ -29,6 +29,7 @@ if __name__ == '__main__':
         help="Number of processes to generate data in parallel (defaults to all cores)",
         default=None,
     )
+    parser.add_argument("-f", "--n_per_file", type=int, default=1000)
     parser.add_argument(
         "-o",
         "--output_folder",
@@ -58,12 +59,13 @@ if __name__ == '__main__':
 
     setup_logging(args.log_level, True, output_folder/f"data-gen-{now}.log")
 
+    # n_per_process = args.n_samples
     timeout = 25 * args.n_per_file
-
+    n_jobs = int(args.n_samples / args.n_per_file) 
     # starter seed to create seeds for each function
 
     set_seed(args.seed)
-    seeds = [random.random() * (i + 1) for i in range(args.processes)]
+    seeds = [random.random() * (i + 1) for i in range(n_jobs)]
 
     with ProcessPoolExecutor(max_workers=args.processes) as executor:
 
