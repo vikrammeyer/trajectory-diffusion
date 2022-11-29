@@ -17,3 +17,7 @@
 ## Unet1D Denoiser
 - Modified the UNet1D implementation from Phil Wang so that it can be conditioned on something for classifier free guidance (also implemented in same repo but only for 2D case)
 - **Hypothesis:** Inductive biases introduced by convolutions, self-attention, and up/down sampling will help the denoiser perform much better (at least it should since each pass requires so much more compute)
+
+#  Data Generation
+- 8 cores generating 500k instances overnight
+- `python3 scripts/gen_data.py -n 500000 -f 2000 -o data/nov28-overnight`

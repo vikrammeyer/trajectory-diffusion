@@ -5,15 +5,15 @@ from concurrent.futures import ProcessPoolExecutor
 import logging
 import pathlib
 from datetime import datetime
-
+from knockknock import email_sender
 from diff_traj.utils.logs import setup_logging
 from diff_traj.dataset.generator import gen_samples
 from diff_traj.cfg import cfg
 from diff_traj.utils.repro import set_seed
 import diff_traj.utils.io as io
 
-if __name__ == '__main__':
-
+@email_sender(recipient_emails=["vjmeyer20@gmail.com", "vikram.j.meyer@vanderbilt.edu"], sender_email="trainstatus88@gmail.com")
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-n",
@@ -79,3 +79,6 @@ if __name__ == '__main__':
 
             except Exception as e:
                 logging.error("Error with generating a chunk of problems: ", e)
+
+if __name__ == '__main__':
+    main()
