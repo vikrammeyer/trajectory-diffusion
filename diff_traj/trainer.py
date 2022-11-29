@@ -6,9 +6,9 @@ from torch.utils.data import DataLoader
 from ema_pytorch import EMA
 from tqdm.auto import tqdm
 from multiprocessing import cpu_count
-from .dataset import StateDataset
-from .utils import *
-from .viz import Visualizations
+from diff_traj.dataset.dataset import StateDataset
+from diff_traj.diffusion_utils import *
+from diff_traj.viz import Visualizations
 
 
 class Trainer1D:
