@@ -33,7 +33,6 @@ cfg = SimpleNamespace(
     rng_seed = 0
 )
 
-
 model = Unet1D(
     dim = traj_len,
     cond_dim = param_len,
