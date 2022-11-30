@@ -55,7 +55,7 @@ class Trainer1D:
 
         # dataset and dataloader
 
-        self.ds = StateDataset(dataset_path)
+        self.ds = StateDataset(cfg, dataset_path)
         dl = DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True) # num_workers = cpu_count()
 
         dl = self.accelerator.prepare(dl)
