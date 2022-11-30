@@ -47,7 +47,7 @@ class StateDataset(torch.utils.data.Dataset):
                 trajs[r][c+3] = math.cos(traj[r][c+3]) # encode the heading theta (radians) as cos theta
 
             # normalize the obstacles position (x,y)
-            for c in range(4, param_len, 3):
+            for c in range(0, param_len, 3):
                 params[r][c] = (param[r][c] - min_x) / (max_x - min_x)
                 params[r][c+1] = (param[r][c+1] - min_y) / (max_y - min_y)
                 params[r][c+2] = (param[r][c+2] - min_r) / (max_r - min_r)

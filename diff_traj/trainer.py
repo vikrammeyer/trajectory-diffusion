@@ -117,13 +117,14 @@ class Trainer1D:
         accelerator = self.accelerator
         device = accelerator.device
 
-        un_norm_trajs = self.ds.un_normalize
+        un_norm = self.ds.un_normalize
 
         # plot ground truth trajectories for the test scenarios
         test_trajs, test_params = next(self.dl)
         test_trajs_np, test_params_np = test_trajs.squeeze().numpy(), test_params.numpy()
         for i in range(test_trajs.shape[0]):
-            self.viz.save_trajectory(un_norm_trajs(test_trajs_np[i]), test_params_np[i][:4], test_params_np[i][4:], self.results_folder/f'gt-{i}.png')
+            traj, param = un_norm(test_trajs_np[i], test_params_np[i])
+            self.viz.save_trajectory(traj, param, self.results_folder/f'gt-{i}.png')
 
         with tqdm(initial = self.step, total = self.train_num_steps, disable = not accelerator.is_main_process) as pbar:
 
@@ -164,7 +165,8 @@ class Trainer1D:
                             sampled_trajs = self.ema.ema_model.sample(cond_vecs = test_params).detach().squeeze().numpy()
 
                             for i in range(sampled_trajs.shape[0]):
-                                self.viz.save_trajectory(un_norm_trajs(sampled_trajs[i]), test_params_np[i][:4], test_params_np[i][4:], self.results_folder/f'{milestone}-{i}.png')
+                                traj, param = un_norm(sampled_trajs[i], test_params_np[i])
+                                self.viz.save_trajectory(traj, param, self.results_folder/f'{milestone}-{i}.png')
 
                         self.save(milestone)
 
