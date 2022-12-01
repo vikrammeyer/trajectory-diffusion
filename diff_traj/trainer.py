@@ -5,8 +5,6 @@ from torch.utils.data import DataLoader
 
 from ema_pytorch import EMA
 from tqdm.auto import tqdm
-from multiprocessing import cpu_count
-from diff_traj.dataset.dataset import StateDataset
 from diff_traj.diffusion_utils import *
 from diff_traj.viz import Visualizations
 
@@ -15,7 +13,7 @@ class Trainer1D:
     def __init__(
         self,
         diffusion_model,
-        dataset_path,
+        dataset,
         cfg,
         *,
         train_batch_size = 16,
@@ -54,9 +52,8 @@ class Trainer1D:
         self.seq_length = diffusion_model.seq_length
 
         # dataset and dataloader
-
-        self.ds = StateDataset(cfg, dataset_path)
-        dl = DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True) # num_workers = cpu_count()
+        self.ds = dataset
+        dl = DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True)
 
         dl = self.accelerator.prepare(dl)
         self.dl = cycle(dl)

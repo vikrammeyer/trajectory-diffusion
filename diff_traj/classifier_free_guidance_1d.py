@@ -182,6 +182,8 @@ class Unet1D(nn.Module):
         self,
         dim,
         cond_dim,
+        init_kernel,
+        init_stride,
         cond_drop_prob = 0.5,
         init_dim = None,
         out_dim = None,
@@ -205,7 +207,7 @@ class Unet1D(nn.Module):
         input_channels = channels
 
         init_dim = default(init_dim, dim)
-        self.init_conv = nn.Conv1d(input_channels, init_dim, 7, padding = 3)
+        self.init_conv = nn.Conv1d(input_channels, init_dim, 7, padding=3)#kernel_size=init_kernel, stride=init_stride)
 
         dims = [init_dim, *map(lambda m: dim * m, dim_mults)]
         in_out = list(zip(dims[:-1], dims[1:]))
@@ -324,19 +326,24 @@ class Unet1D(nn.Module):
         for block1, block2, attn, downsample in self.downs:
             x = block1(x, t, c)
             h.append(x)
+            print(x.shape)
 
             x = block2(x, t, c)
             x = attn(x)
+            print(x.shape)
             h.append(x)
 
             x = downsample(x)
-
+        print('-----')
         x = self.mid_block1(x, t, c)
         x = self.mid_attn(x)
         x = self.mid_block2(x, t, c)
 
         for block1, block2, attn, upsample in self.ups:
-            x = torch.cat((x, h.pop()), dim = 1)
+            print(x.shape)
+            a = h.pop()
+            print(a.shape)
+            x = torch.cat((x, a), dim = 1)
             x = block1(x, t, c)
 
             x = torch.cat((x, h.pop()), dim = 1)

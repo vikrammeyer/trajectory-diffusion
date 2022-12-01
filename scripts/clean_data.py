@@ -1,30 +1,10 @@
 from diff_traj.viz import Visualizations
-from diff_traj.dataset import StateDataset
-import numpy as np
-from types import SimpleNamespace
-import csv
+from diff_traj.dataset.dataset import StateDataset
+from diff_traj.cfg import cfg
 import matplotlib.pyplot as plt
 
 import lovely_tensors as lt
 lt.monkey_patch()
-
-cfg = SimpleNamespace(
-    lane_width = 20,
-    car_length = 5,
-    car_width = 2,
-    car_horizon = 60,
-    dist_b4_obst = 15,
-    min_obst_radius = 0,
-    max_obst_radius = 0,
-    n_obstacles = 3,
-    n_constraints = 480,
-    n_intervals = 40,
-    interval_dur = 0.01,
-    max_vel = 200,
-    max_accel = 500,
-    rng_seed = 0
-)
-
 
 # plt.axis([-50,50,0,10000]) #[x_min, xmax, ymin,ymax]
 # plt.ion()
@@ -44,12 +24,12 @@ cfg = SimpleNamespace(
 #         print('deleting current image')
 
 
-in_file = '/Users/vikram/research/tto/data/s2022/batch.csv'
+in_file = 'data/nov29-night'#'/Users/vikram/research/tto/data/s2022/batch.csv'
 # out_file = '/Users/vikram/research/tto/data/s2022/small_data_clean.csv'
 
 viz = Visualizations(cfg)
 
-plt.axis([0,120, 0, cfg.lane_width + 20])
+plt.axis([0,120, -10, 10])
 plt.ion()
 plt.show()
 
@@ -69,16 +49,14 @@ plt.show()
 #         else:
 #             writer.writerow(row)
 
-
-data = StateDataset(in_file)
+data = StateDataset(cfg, in_file)
 di = iter(data)
 
 for traj, params in di:
     traj = traj.squeeze()
     plt.clf()
     plt.axis([0,120, 0, cfg.lane_width + 20])
-    traj = data.un_normalize(traj.numpy())
+    traj, params = data.un_normalize(traj, params)
 
-    print(params)
-    viz.show_trajectory(traj,params[:4].numpy(), params[4:].numpy())
+    viz.show_trajectory(traj, params)
     input('press to continue')

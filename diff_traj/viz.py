@@ -39,8 +39,8 @@ class Visualizations:
     def show_trajectory(self, x, obstacles):
         fig, ax = plt.subplots()
         self.plot_trajectory(ax, obstacles, x)
-        plt.show()
-        plt.close(fig)
+        # plt.show()
+        # plt.close(fig)
 
     def create_gif_from_pngs(self, folder_path, output_path):
         from glob import glob
