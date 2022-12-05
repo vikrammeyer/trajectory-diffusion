@@ -81,7 +81,7 @@ def setup_problem(cfg, casadi_options = {}, solver_options = {'print_level': 0 }
     # theta limits (0, 2pi)
     problem.subject_to(
         problem.bounded(
-            MX.zeros(n,1), thetas, 2 * pi * MX.ones(n,1)
+            cfg.min_theta * MX.ones(n,1), thetas, cfg.max_theta * MX.ones(n,1)
     ))
 
     ## CONTROLS Constraints
@@ -137,34 +137,35 @@ if __name__ == '__main__':
     from types import SimpleNamespace
     from diff_traj.dataset.obstacles import generate_obstacles
     from diff_traj.viz import Visualizations
+    from diff_traj.cfg import cfg
 
     # Can test different configurations here
     # in meters and seconds
-    cfg = SimpleNamespace(
-        lane_width = 20,
-        car_length = 4.48, # 14.7 ft is avg car length
-        car_width = 1.77, # 5.8 ft is avg car width
-        car_horizon = 40,
-        dist_b4_obst = 10,
-        min_obst_radius = 1.2,
-        max_obst_radius = 3,
-        min_theta = 0,
-        max_theta = 2 * math.pi,
-        n_obstacles = 3,
-        n_intervals = 40,
-        interval_dur = 0.25,
-        max_vel = 15.65, # 35 mph
-        max_ang_vel = 1, # 1 G = 1 m/s^2 is max force you want to feel in the car
-        max_accel = 1,
-        rng_seed = 0,
-        traj_length = 160,
-        controls_length = 80
-    )
+    # cfg = SimpleNamespace(
+    #     lane_width = 20,
+    #     car_length = 4.48, # 14.7 ft is avg car length
+    #     car_width = 1.77, # 5.8 ft is avg car width
+    #     car_horizon = 40,
+    #     dist_b4_obst = 10,
+    #     min_obst_radius = 1.2,
+    #     max_obst_radius = 3,
+    #     min_theta = 0,
+    #     max_theta = 2 * math.pi,
+    #     n_obstacles = 3,
+    #     n_intervals = 40,
+    #     interval_dur = 0.25,
+    #     max_vel = 15.65, # 35 mph
+    #     max_ang_vel = 1, # 1 G = 1 m/s^2 is max force you want to feel in the car
+    #     max_accel = 1,
+    #     rng_seed = 0,
+    #     traj_length = 160,
+    #     controls_length = 80
+    # )
 
     viz = Visualizations(cfg)
     obsts = generate_obstacles(cfg)
     problem = setup_problem(cfg)
-    problem.set_value(problem.p[4:13], obsts)
+    problem.set_value(problem.p[4:4+3*cfg.n_obstacles], obsts)
     problem.solver('ipopt')
 
     try:

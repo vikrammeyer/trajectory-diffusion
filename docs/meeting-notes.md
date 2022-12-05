@@ -10,3 +10,19 @@
 - write up pytorch dataset
 - get VM w/ GPU working and an easy test locally -> deploy remotely & train process setup
 - train the first experiment as suggested
+
+
+# Today
+
+  
+## Baseline Comparisons:
+- Fully Connected Network (obstacles -> trajectory)
+  - will probably perform poorly but 
+- CVAE (already setup, just need to train for equivalent amount of time)
+
+### metrics
+- % collsion free trajectories (this is what was used in the Neurips workshop paper)
+- dynamics violations ?? (this could be interesting to see the "quality" of the generated trajectories)
+
+
+
