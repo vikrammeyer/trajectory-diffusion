@@ -212,6 +212,7 @@ class Unet1D(nn.Module):
         )
 
         # conditioning/parameter vector embeddings
+        # TODO: can make cond_mlp more expressive if still not getting good results
         self.cond_mlp = nn.Linear(cond_dim, dim)
         self.null_cond_emb = nn.Parameter(torch.randn(cond_dim))
 

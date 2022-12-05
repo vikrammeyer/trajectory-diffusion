@@ -41,6 +41,7 @@ def main():
         dim = 64,
         cond_dim = cfg.params_length,
         channels = channels,
+        cond_drop_prob=0.05
     )
 
     logging.info('built unet')
