@@ -143,7 +143,8 @@ class Trainer1D:
                     self.save(milestone)
 
                 pbar.update(1)
-
+        
+        imgs = []
         for i in range(test_trajs.shape[0]):
             traj, param = un_norm(test_trajs_np[i], test_params_np[i])
             fname = str(self.results_folder/f'gt-{i}.png')
