@@ -326,24 +326,19 @@ class Unet1D(nn.Module):
         for block1, block2, attn, downsample in self.downs:
             x = block1(x, t, c)
             h.append(x)
-            # print(x.shape)
 
             x = block2(x, t, c)
             x = attn(x)
-            # print(x.shape)
             h.append(x)
 
             x = downsample(x)
-        # print('-----')
+
         x = self.mid_block1(x, t, c)
         x = self.mid_attn(x)
         x = self.mid_block2(x, t, c)
 
         for block1, block2, attn, upsample in self.ups:
-            # print(x.shape)
-            a = h.pop()
-            # print(a.shape)
-            x = torch.cat((x, a), dim = 1)
+            x = torch.cat((x, h.pop()), dim = 1)
             x = block1(x, t, c)
 
             x = torch.cat((x, h.pop()), dim = 1)
