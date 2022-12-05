@@ -96,6 +96,7 @@ class Trainer1D:
 
         # Test scenarios
         test_trajs, test_params = next(self.dl)
+        test_trajs, test_params = test_trajs.to(self.dev), test_params.to(self.dev)
         test_trajs_np, test_params_np = test_trajs.squeeze().cpu().numpy(), test_params.cpu().numpy()
 
         with tqdm(initial = self.step, total = self.train_num_steps) as pbar:
