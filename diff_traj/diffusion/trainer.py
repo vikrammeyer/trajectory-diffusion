@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
+import wandb
 
 from ema_pytorch import EMA
 from tqdm.auto import tqdm
@@ -23,7 +24,8 @@ class Trainer1D:
         ema_decay = 0.995,
         adam_betas = (0.9, 0.99),
         save_and_sample_every = 1000,
-        num_samples = 25
+        num_samples = 25,
+        debug_mode=False
     ):
         super().__init__()
 
@@ -55,6 +57,10 @@ class Trainer1D:
 
         self.viz = Visualizations(cfg)
 
+        self.debug_mode = debug_mode
+        if not self.debug_mode:
+            self.run = wandb.init(project="trajectory-diffusion", entity="vikram-meyer", job_type="train_diffusion")
+
     def save(self, milestone):
         data = {
             'step': self.step,
@@ -63,7 +69,14 @@ class Trainer1D:
             'ema': self.ema.state_dict()
         }
 
-        torch.save(data, str(self.results_folder / f'model-{milestone}.pt'))
+        milestone_path = str(self.results_folder / f'model-{milestone}.pt')
+        torch.save(data, milestone_path)
+
+        if not self.debug_mode:
+            artifact = wandb.Artifact(f'model-{milestone}', type='checkpoint')
+            artifact.add_file(milestone_path)
+
+            self.run.log_artifact(artifact)
 
     def load(self, milestone):
         data = torch.load(str(self.results_folder / f'model-{milestone}.pt'), map_location=self.dev)
@@ -73,15 +86,17 @@ class Trainer1D:
         self.opt.load_state_dict(data['opt'])
         self.ema.load_state_dict(data['ema'])
 
+        # TODO: finish for benchmarking
+        # if not self.debug:
+        #     model_at = self.run.use_artifact(milestone, type='checkpoint')
+        #     model_dir = model_at.download()
+
     def train(self):
         un_norm = self.ds.un_normalize
 
-        # plot ground truth trajectories for the test scenarios
+        # Test scenarios
         test_trajs, test_params = next(self.dl)
         test_trajs_np, test_params_np = test_trajs.squeeze().cpu().numpy(), test_params.cpu().numpy()
-        for i in range(test_trajs.shape[0]):
-            traj, param = un_norm(test_trajs_np[i], test_params_np[i])
-            self.viz.save_trajectory(traj, param, self.results_folder/f'gt-{i}.png')
 
         with tqdm(initial = self.step, total = self.train_num_steps) as pbar:
 
@@ -101,6 +116,7 @@ class Trainer1D:
 
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 pbar.set_description(f'loss: {total_loss:.4f}')
+                self.run.log({"loss": total_loss})
 
                 self.opt.step()
                 self.opt.zero_grad()
@@ -115,11 +131,22 @@ class Trainer1D:
 
                     with torch.no_grad():
                         sampled_trajs = self.ema.ema_model.sample(cond_vecs = test_params).detach().squeeze().cpu().numpy()
-
+                        imgs = []
                         for i in range(sampled_trajs.shape[0]):
                             traj, param = un_norm(sampled_trajs[i], test_params_np[i])
-                            self.viz.save_trajectory(traj, param, self.results_folder/f'{milestone}-{i}.png')
+                            fname = str(self.results_folder/f'{milestone}-{i}.png')
+                            self.viz.save_trajectory(traj, param, fname)
+                            imgs.append(wandb.Image(fname))
 
+                        self.run.log({"Trajectories": imgs})
                     self.save(milestone)
 
                 pbar.update(1)
+
+        for i in range(test_trajs.shape[0]):
+            traj, param = un_norm(test_trajs_np[i], test_params_np[i])
+            fname = str(self.results_folder/f'gt-{i}.png')
+            self.viz.save_trajectory(traj, param, fname)
+            imgs.append(wandb.Image(fname, caption="Ground Truth"))
+
+        self.run.log({"Trajectories": imgs})

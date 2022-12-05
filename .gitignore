@@ -6,3 +6,5 @@ env/
 data/
 *.egg-info/
 *.out
+dec1/
+wandb/

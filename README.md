@@ -21,11 +21,13 @@ from pkg.module import Class, function
 To move folders, use `zip -r filename.zip foldername` and then download the file using the google ssh in browser utilities.
 
 ## experiments
-- Unet1D states (1 channel)
-- Unet1D states (4 channels- x, y, theta, v)
-- Baselines:
-  - CVAE: state trajectory, conditioned on obstacles
-  - Fully Connected: obstacles -> full state trajectory
+- Diffusion:
+  - Unet1D states (1 channel)
+  - Unet1D states (4 channels- x, y, theta, v)
+- Baselines (implement in this priority order in case we don't have time for it all):
+  - (1) Fully Connected: obstacles -> full state trajectory
+  - (2) RNN/LSTM: many to many
+  - (3) CVAE: state trajectory, conditioned on obstacles
 
 ### wont do:
 - dynamic obstacles
