@@ -78,7 +78,7 @@ class StateDataset(torch.utils.data.Dataset):
 
         for c in range(0, self.traj_len, 4):
             new_traj[c] = (traj[c] * (self.max_x - self.min_x)) + self.min_x
-            new_traj[c+1] = (traj[c+1] * (self.max_y - self.min_x)) + self.min_y
+            new_traj[c+1] = (traj[c+1] * (self.max_y - self.min_y)) + self.min_y
             new_traj[c+2] = (traj[c+2] * (self.max_v - self.min_v)) + self.min_v
             new_traj[c+3] = math.acos(clamp(traj[c+3])) # acos domain is [-1, 1] and predictions are noisy
 
