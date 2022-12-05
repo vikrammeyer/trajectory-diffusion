@@ -11,7 +11,7 @@ from einops.layers.torch import Rearrange
 
 from tqdm.auto import tqdm
 
-from utils import *
+from diff_traj.diffusion_utils import *
 
 # small helper modules
 

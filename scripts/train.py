@@ -3,13 +3,11 @@ from diff_traj.trainer import Trainer1D
 from diff_traj.dataset.dataset import StateChannelsDataset, StateDataset
 from diff_traj.classifier_free_guidance_1d import Unet1D, GaussianDiffusion1D
 from diff_traj.cfg import cfg
-from knockknock import email_sender
 
-# @email_sender(recipient_emails=["vjmeyer20@gmail.com", "vikram.j.meyer@vanderbilt.edu"], sender_email="trainstatus88@gmail.com")
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--train_steps', type=int, default=50_000)
-    parser.add_argument('-t', '--timesteps', type=int, default=1_000)
+    parser.add_argument('-n', '--train_steps', type=int, default=50000)
+    parser.add_argument('-t', '--timesteps', type=int, default=1000)
     parser.add_argument('-st', '--sampling_timesteps', type=int, default=25)
     parser.add_argument('-l', '--loss_type', type=str, default='l2')
     parser.add_argument('-b', '--beta_schedule', type=str, default='cosine')
@@ -41,6 +39,8 @@ def main():
         resnet_block_groups=4
     )
 
+    print('built unet')
+
     diffusion = GaussianDiffusion1D(
         model,
         seq_length = cfg.traj_length,
@@ -49,6 +49,8 @@ def main():
         loss_type = args.loss_type,
         beta_schedule = args.beta_schedule
     )
+
+    print('built gaussian diffusion')
 
     trainer = Trainer1D(
         diffusion,
@@ -61,6 +63,8 @@ def main():
         gradient_accumulate_every = 2,              # gradient accumulation steps
         ema_decay = 0.995,                          # exponential moving average decay
     )
+
+    print('built trainer')
 
     trainer.train()
 
