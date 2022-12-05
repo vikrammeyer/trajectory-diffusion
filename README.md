@@ -19,3 +19,18 @@ from pkg.module import Class, function
 - `sudo apt-get install zip`
 
 To move folders, use `zip -r filename.zip foldername` and then download the file using the google ssh in browser utilities.
+
+## experiments
+- Unet1D states (1 channel)
+- Unet1D states (4 channels- x, y, theta, v)
+- Baselines:
+  - CVAE: state trajectory, conditioned on obstacles
+  - Fully Connected: obstacles -> full state trajectory
+
+### wont do:
+- dynamic obstacles
+- Unet1D states & controls as separate information channels (nvm won't work b/c dimensions won't match)
+
+## metrics
+- % collision free (num of states collision free / total)
+- dynamics violations

@@ -1,45 +1,49 @@
 import argparse
-from diff_traj.trainer import Trainer1D
+import logging
+from pathlib import Path
+from datetime import datetime
+from diff_traj.diffusion.trainer import Trainer1D
 from diff_traj.dataset.dataset import StateChannelsDataset, StateDataset
-from diff_traj.classifier_free_guidance_1d import Unet1D, GaussianDiffusion1D
+from diff_traj.diffusion.classifier_free_guidance_1d import Unet1D, GaussianDiffusion1D
 from diff_traj.cfg import cfg
+from diff_traj.utils.logs import setup_logging
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--train_steps', type=int, default=50000)
     parser.add_argument('-t', '--timesteps', type=int, default=1000)
     parser.add_argument('-st', '--sampling_timesteps', type=int, default=25)
-    parser.add_argument('-l', '--loss_type', type=str, default='l2')
-    parser.add_argument('-b', '--beta_schedule', type=str, default='cosine')
-    parser.add_argument('-dt', '--dataset_type', type=str, default='state')
-    parser.add_argument('-d', '--dataset_path', type=str, default='/Users/vikram/research/tto/data/s2022/batch.csv') # small_data.csv
-    parser.add_argument('-r', '--results', type=str, default='./results/test-train/')
+    parser.add_argument('-l', '--loss_type', default='l2', help='l1, l2')
+    parser.add_argument('-b', '--beta_schedule', default='cosine', help='linear, cosine')
+    parser.add_argument('-dt', '--dataset_type', default='state', help='state, channels')
+    parser.add_argument('-d', '--dataset_folder', default='./data/subset/')
+    parser.add_argument('-o', '--output_folder', default='./results/demo/')
+    parser.add_argument('-ll', '--log_level', default='INFO', help='DEBUG, INFO, WARNING, ERROR')
     args = parser.parse_args()
 
+    output_folder = Path(args.output_folder)
+    output_folder.mkdir(exist_ok = True)
+    now = datetime.now().strftime("%b-%d-%H-%M-%S")
+    setup_logging(args.log_level, True, output_folder/f"train-diff-{now}.log")
+
     if args.dataset_type == 'state':
-        init_kernel = 16
-        init_stride = 4
         channels = 1
-        dataset = StateDataset(cfg, args.dataset_path)
+        dataset = StateDataset(cfg, args.dataset_folder)
     elif args.dataset_type == 'channels':
-        init_kernel = 4
-        init_stride = 1
         channels = 4
-        dataset = StateChannelsDataset(cfg, args.dataset_path)
+        dataset = StateChannelsDataset(cfg, args.dataset_folder)
     else:
         raise ValueError("dataset type not supported")
 
+    logging.info('loaded dataset')
+
     model = Unet1D(
-        dim = cfg.traj_length,
+        dim = 64,
         cond_dim = cfg.params_length,
-        init_kernel = init_kernel,
-        init_stride = init_stride,
         channels = channels,
-        dim_mults = (1, 2, 4),
-        resnet_block_groups=4
     )
 
-    print('built unet')
+    logging.info('built unet')
 
     diffusion = GaussianDiffusion1D(
         model,
@@ -50,13 +54,13 @@ def main():
         beta_schedule = args.beta_schedule
     )
 
-    print('built gaussian diffusion')
+    logging.info('built gaussian diffusion')
 
     trainer = Trainer1D(
         diffusion,
         dataset,
         cfg,
-        results_folder = args.results,
+        results_folder = output_folder,
         train_batch_size = 32,
         train_lr = 8e-5,
         train_num_steps = args.train_steps,         # total training steps
@@ -64,9 +68,11 @@ def main():
         ema_decay = 0.995,                          # exponential moving average decay
     )
 
-    print('built trainer')
+    logging.info('built trainer')
 
     trainer.train()
+
+    logging.info("finished training")
 
 if __name__ == '__main__':
     main()

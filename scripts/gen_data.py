@@ -5,14 +5,12 @@ from concurrent.futures import ProcessPoolExecutor
 import logging
 import pathlib
 from datetime import datetime
-from knockknock import email_sender
 from diff_traj.utils.logs import setup_logging
 from diff_traj.dataset.generator import gen_samples
 from diff_traj.cfg import cfg
 from diff_traj.utils.repro import set_seed
 import diff_traj.utils.io as io
 
-@email_sender(recipient_emails=["vjmeyer20@gmail.com", "vikram.j.meyer@vanderbilt.edu"], sender_email="trainstatus88@gmail.com")
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -61,7 +59,7 @@ def main():
 
     # n_per_process = args.n_samples
     timeout = 25 * args.n_per_file
-    n_jobs = int(args.n_samples / args.n_per_file) 
+    n_jobs = int(args.n_samples / args.n_per_file)
     # starter seed to create seeds for each function
 
     set_seed(args.seed)
