@@ -1,7 +1,7 @@
 from matplotlib.patches import Rectangle, Circle
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
-import matplotlib as mpl
+from math import degrees
 
 class Visualizations:
     def __init__(self, cfg):
@@ -62,9 +62,7 @@ class Visualizations:
     def plot_car(self, ax, pose):
         x, y, _, theta = pose
         top_left = (x - self.car_length / 2, y - self.car_width / 2)
-        rect = Rectangle(top_left, self.car_length, self.car_width, fill=False)
-        tf = mpl.transforms.Affine2D().rotate_around(x, y, theta) + ax.transData
-        rect.set_transform(tf)
+        rect = Rectangle(top_left, self.car_length, self.car_width, angle=degrees(theta), fill=False)
         ax.add_patch(rect)
 
     def plot_obstacles(self, ax, obstacles):

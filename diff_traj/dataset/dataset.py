@@ -1,11 +1,15 @@
 from diff_traj.utils.io import read_file
 import pathlib
 import torch
-import math
 import numpy as np
 
-def clamp(n, smallest=-1, largest=1):
-    return max(smallest, min(n, largest))
+def neg_one_to_one(x, xmin, xmax):
+    """ [xmin, xmax] -> [-1, 1]"""
+    return 2 * ((x - xmin) / (xmax - xmin)) - 1
+
+def unnormalize(x_norm, xmin, xmax):
+    """ [-1, 1] -> [xmin, xmax] """
+    return (((x_norm + 1) * (xmax - xmin)) / 2) + xmin
 
 class StateDataset(torch.utils.data.Dataset):
     """ 1D temporal convolutions
@@ -18,7 +22,6 @@ class StateDataset(torch.utils.data.Dataset):
         param = []
         traj = []
         dataset_folder = pathlib.Path(dataset_folder)
-        # TODO: save cfg in a seperate pkl file and load straight from here (maybe)
         for pkl_data_file in dataset_folder.glob('*.pkl'):
             data = read_file(pkl_data_file)
 
@@ -26,67 +29,53 @@ class StateDataset(torch.utils.data.Dataset):
                 param.append(sample['obsts'])
                 traj.append(sample['states'])
 
-        n_trajs = len(traj)
-        traj_len = cfg.traj_length
-        param_len = cfg.params_length
+        self.n_trajs = len(traj)
+        self.traj_len = cfg.traj_length
+        self.param_len = cfg.params_length
 
-        min_x = 0
-        max_x = 120
-        min_y = -cfg.lane_width / 2
-        max_y = cfg.lane_width / 2
-        min_v = -cfg.max_vel
-        max_v = cfg.max_vel
+        self.min_x = 0
+        self.max_x = 120
+        self.min_y = -cfg.lane_width / 2
+        self.max_y = cfg.lane_width / 2
+        self.min_v = -cfg.max_vel
+        self.max_v = cfg.max_vel
+        self.min_theta = cfg.min_theta
+        self.max_theta = cfg.max_theta
 
-        min_r = cfg.min_obst_radius
-        max_r = cfg.max_obst_radius
+        self.min_r = cfg.min_obst_radius
+        self.max_r = cfg.max_obst_radius
 
-        trajs = torch.zeros((n_trajs, traj_len))
-        params = torch.zeros((n_trajs, param_len))
+        self.trajs = torch.zeros((self.n_trajs, self.traj_len))
+        self.params = torch.zeros((self.n_trajs, self.param_len))
 
         # Normalize the trajectories and obstacles to be in range [-1, 1] for each of their features
-        for r in range(n_trajs):
-            for c in range(0, traj_len, 4):
-                trajs[r][c] = (traj[r][c] - min_x) / (max_x - min_x)     # Normalize x to [-1, 1]
-                trajs[r][c+1] = (traj[r][c+1] - min_y) / (max_y - min_y) # Normalize y to [-1, 1]
-                trajs[r][c+2] = (traj[r][c+2] - min_v) / (max_v - min_v) # Normalize v to [-1, 1]
-                trajs[r][c+3] = math.cos(traj[r][c+3]) # encode the heading theta (radians) as cos theta
+        for r in range(self.n_trajs):
+            for c in range(0, self.traj_len, 4):
+                self.trajs[r][c] = neg_one_to_one(traj[r][c], self.min_x, self.max_x)
+                self.trajs[r][c+1] = neg_one_to_one(traj[r][c+1], self.min_y, self.max_y)
+                self.trajs[r][c+2] = neg_one_to_one(traj[r][c+2], self.min_v, self.max_v)
+                self.trajs[r][c+3] = neg_one_to_one(traj[r][c+3], self.min_theta, self.max_theta)
 
-            # normalize the obstacles position (x,y)
-            for c in range(0, param_len, 3):
-                params[r][c] = (param[r][c] - min_x) / (max_x - min_x)
-                params[r][c+1] = (param[r][c+1] - min_y) / (max_y - min_y)
-                params[r][c+2] = (param[r][c+2] - min_r) / (max_r - min_r)
-
-        self.n_trajs = n_trajs
-        self.traj_len = traj_len
-        self.param_len = param_len
-        self.min_x = min_x
-        self.max_x = max_x
-        self.min_y = min_y
-        self.max_y = max_y
-        self.min_v = min_v
-        self.max_v = max_v
-        self.min_r = min_r
-        self.max_r = max_r
-        self.trajs = trajs
-        self.params = params
+            for c in range(0,self. param_len, 3):
+                self.params[r][c] = neg_one_to_one(param[r][c], self.min_x, self.max_x)
+                self.params[r][c+1] = neg_one_to_one(param[r][c+1], self.min_y, self.max_y)
+                self.params[r][c+2] = neg_one_to_one(param[r][c+2], self.min_r, self.max_r)
 
     def un_normalize(self, traj, params):
         # traj/params are not batched
-
         new_traj = np.zeros(self.traj_len)
 
         for c in range(0, self.traj_len, 4):
-            new_traj[c] = (traj[c] * (self.max_x - self.min_x)) + self.min_x
-            new_traj[c+1] = (traj[c+1] * (self.max_y - self.min_y)) + self.min_y
-            new_traj[c+2] = (traj[c+2] * (self.max_v - self.min_v)) + self.min_v
-            new_traj[c+3] = math.acos(clamp(traj[c+3])) # acos domain is [-1, 1] and predictions are noisy
+            new_traj[c] = unnormalize(traj[c], self.min_x, self.max_x)
+            new_traj[c+1] = unnormalize(traj[c+1], self.min_y, self.max_y)
+            new_traj[c+2] = unnormalize(traj[c+2], self.min_v, self.max_v)
+            new_traj[c+3] = unnormalize(traj[c+3], self.min_theta, self.max_theta)
 
         new_param = np.zeros(self.param_len)
         for c in range(0, self.param_len, 3):
-            new_param[c] = params[c] * (self.max_x - self.min_x) + self.min_x
-            new_param[c+1] = params[c+1] * (self.max_y - self.min_y) + self.min_y
-            new_param[c+2] = params[c+2] * (self.max_r - self.min_r) + self.min_r
+            new_param[c] = unnormalize(params[c], self.min_x, self.max_x)
+            new_param[c+1] = unnormalize(params[c], self.min_y, self.max_y)
+            new_param[c+2] = unnormalize(params[c], self.min_r, self.max_r)
 
         return new_traj, new_param
 
@@ -116,75 +105,64 @@ class StateChannelsDataset(torch.utils.data.Dataset):
                 param.append(sample['obsts'])
                 traj.append(sample['states'])
 
-        n_trajs = len(traj)
-        traj_len = cfg.traj_length
-        param_len = cfg.params_length
+        self.n_trajs = len(traj)
+        self.traj_len = cfg.traj_length
+        self.param_len = cfg.params_length
 
-        min_x = 0
-        max_x = 120
-        min_y = -cfg.lane_width / 2
-        max_y = cfg.lane_width / 2
-        min_v = -cfg.max_vel
-        max_v = cfg.max_vel
+        self.min_x = 0
+        self.max_x = 120
+        self.min_y = -cfg.lane_width / 2
+        self.max_y = cfg.lane_width / 2
+        self.min_v = -cfg.max_vel
+        self.max_v = cfg.max_vel
+        self.min_theta = cfg.min_theta
+        self.max_theta = cfg.max_theta
 
-        min_r = cfg.min_obst_radius
-        max_r = cfg.max_obst_radius
+        self.min_r = cfg.min_obst_radius
+        self.max_r = cfg.max_obst_radius
+
+        self.trajs = torch.zeros((self.n_trajs, self.traj_len))
+        self.params = torch.zeros((self.n_trajs, self.param_len))
 
         # store each (x,y,v theta) in a separate channel for trajectories
-        trajs = torch.zeros((n_trajs, 4, cfg.n_intervals))
-        params = torch.zeros((n_trajs, param_len))
+        self.trajs = torch.zeros((self.n_trajs, 4, cfg.n_intervals))
+        self.params = torch.zeros((self.n_trajs, self.param_len))
 
         # Normalize the trajectories and obstacles to be in range [-1, 1] for each of their features
-        for r in range(n_trajs):
-            for i, c in enumerate(range(0, traj_len, 4)):
-                trajs[r][0][i] = (traj[r][c] - min_x) / (max_x - min_x)     # Normalize x to [-1, 1]
-                trajs[r][1][i] = (traj[r][c+1] - min_y) / (max_y - min_y) # Normalize y to [-1, 1]
-                trajs[r][2][i] = (traj[r][c+2] - min_v) / (max_v - min_v) # Normalize v to [-1, 1]
-                trajs[r][3][i] = math.cos(traj[r][c+3]) # encode the heading theta (radians) as cos theta
+        for r in range(self.n_trajs):
+            for i, c in enumerate(range(0, self.traj_len, 4)):
+                self.trajs[r][0][i] = neg_one_to_one(traj[r][c], self.min_x, self.max_x)
+                self.trajs[r][1][i] = neg_one_to_one(traj[r][c+1], self.min_y, self.max_y)
+                self.trajs[r][2][i] = neg_one_to_one(traj[r][c+2], self.min_v, self.max_v)
+                self.trajs[r][3][i] = neg_one_to_one(traj[r][c+3], self.min_theta, self.max_theta)
 
             # normalize the obstacles position (x,y)
-            for c in range(0, param_len, 3):
-                params[r][c] = (param[r][c] - min_x) / (max_x - min_x)
-                params[r][c+1] = (param[r][c+1] - min_y) / (max_y - min_y)
-                params[r][c+2] = (param[r][c+2] - min_r) / (max_r - min_r)
-
-        self.n_trajs = n_trajs
-        self.traj_len = traj_len
-        self.param_len = param_len
-        self.min_x = min_x
-        self.max_x = max_x
-        self.min_y = min_y
-        self.max_y = max_y
-        self.min_v = min_v
-        self.max_v = max_v
-        self.min_r = min_r
-        self.max_r = max_r
-        self.trajs = trajs
-        self.params = params
+            for c in range(0, self.param_len, 3):
+                self.params[r][c] = neg_one_to_one(param[r][c], self.min_x, self.max_x)
+                self.params[r][c+1] = neg_one_to_one(param[r][c+1], self.min_y, self.max_y)
+                self.params[r][c+2] = neg_one_to_one(param[r][c+2], self.min_r, self.max_r)
 
     def un_normalize(self, traj, params):
         # traj: C, N
-        # params: C, N_obstacles
         # traj/params are not batched
 
         new_traj = np.zeros(self.traj_len)
 
         for i, c in enumerate(range(0, self.traj_len, 4)):
-            new_traj[c] = traj[0][i] * (self.max_x - self.min_x) + self.min_x
-            new_traj[c+1] = traj[1][i] * (self.max_y - self.min_y) + self.min_y
-            new_traj[c+2] = traj[2][i] * (self.max_v - self.min_v) + self.min_v
-            new_traj[c+3] = math.acos(clamp(traj[3][i])) # acos domain is [-1, 1] and predictions are noisy
+            new_traj[c] = unnormalize(traj[0][i], self.min_x, self.max_x)
+            new_traj[c+1] = unnormalize(traj[1][i], self.min_y, self.max_y)
+            new_traj[c+2] = unnormalize(traj[2][i], self.min_v, self.max_v)
+            new_traj[c+3] = unnormalize(traj[3][i], self.min_theta, self.max_theta)
 
         new_param = np.zeros(self.param_len)
         for c in range(0, self.param_len, 3):
-            new_param[c] = params[c] * (self.max_x - self.min_x) + self.min_x
-            new_param[c+1] = params[c+1] * (self.max_y - self.min_y) + self.min_y
-            new_param[c+2] = params[c+2] * (self.max_r - self.min_r) + self.min_r
+            new_param[c] = unnormalize(params[c], self.min_x, self.max_x)
+            new_param[c+1] = unnormalize(params[c], self.min_y, self.max_y)
+            new_param[c+2] = unnormalize(params[c], self.min_r, self.max_r)
 
         return new_traj, new_param
 
     def __getitem__(self, idx):
-        # unsqueeze to add a single channel dimension to work with Unet1D
         return self.trajs[idx], self.params[idx]
 
     def __len__(self):
