@@ -7,7 +7,13 @@ def neg_one_to_one(x, xmin, xmax):
     """ [xmin, xmax] -> [-1, 1]"""
     return 2 * ((x - xmin) / (xmax - xmin)) - 1
 
+def zero_to_one(x, xmin, xmax):
+    return (x - xmin) / (xmax - xmin)
+
 def unnormalize(x_norm, xmin, xmax):
+    return x_norm * (xmax - xmin) + xmin
+
+def unnormalize_neg_one_to_one(x_norm, xmin, xmax):
     """ [-1, 1] -> [xmin, xmax] """
     return (((x_norm + 1) * (xmax - xmin)) / 2) + xmin
 
@@ -51,15 +57,15 @@ class StateDataset(torch.utils.data.Dataset):
         # Normalize the trajectories and obstacles to be in range [-1, 1] for each of their features
         for r in range(self.n_trajs):
             for c in range(0, self.traj_len, 4):
-                self.trajs[r][c] = neg_one_to_one(traj[r][c], self.min_x, self.max_x)
-                self.trajs[r][c+1] = neg_one_to_one(traj[r][c+1], self.min_y, self.max_y)
-                self.trajs[r][c+2] = neg_one_to_one(traj[r][c+2], self.min_v, self.max_v)
-                self.trajs[r][c+3] = neg_one_to_one(traj[r][c+3], self.min_theta, self.max_theta)
+                self.trajs[r][c] = zero_to_one(traj[r][c], self.min_x, self.max_x)
+                self.trajs[r][c+1] = zero_to_one(traj[r][c+1], self.min_y, self.max_y)
+                self.trajs[r][c+2] = zero_to_one(traj[r][c+2], self.min_v, self.max_v)
+                self.trajs[r][c+3] = zero_to_one(traj[r][c+3], self.min_theta, self.max_theta)
 
             for c in range(0,self. param_len, 3):
-                self.params[r][c] = neg_one_to_one(param[r][c], self.min_x, self.max_x)
-                self.params[r][c+1] = neg_one_to_one(param[r][c+1], self.min_y, self.max_y)
-                self.params[r][c+2] = neg_one_to_one(param[r][c+2], self.min_r, self.max_r)
+                self.params[r][c] = zero_to_one(param[r][c], self.min_x, self.max_x)
+                self.params[r][c+1] = zero_to_one(param[r][c+1], self.min_y, self.max_y)
+                self.params[r][c+2] = zero_to_one(param[r][c+2], self.min_r, self.max_r)
 
     def un_normalize(self, traj, params):
         # traj/params are not batched
@@ -131,16 +137,16 @@ class StateChannelsDataset(torch.utils.data.Dataset):
         # Normalize the trajectories and obstacles to be in range [-1, 1] for each of their features
         for r in range(self.n_trajs):
             for i, c in enumerate(range(0, self.traj_len, 4)):
-                self.trajs[r][0][i] = neg_one_to_one(traj[r][c], self.min_x, self.max_x)
-                self.trajs[r][1][i] = neg_one_to_one(traj[r][c+1], self.min_y, self.max_y)
-                self.trajs[r][2][i] = neg_one_to_one(traj[r][c+2], self.min_v, self.max_v)
-                self.trajs[r][3][i] = neg_one_to_one(traj[r][c+3], self.min_theta, self.max_theta)
+                self.trajs[r][0][i] = zero_to_one(traj[r][c], self.min_x, self.max_x)
+                self.trajs[r][1][i] = zero_to_one(traj[r][c+1], self.min_y, self.max_y)
+                self.trajs[r][2][i] = zero_to_one(traj[r][c+2], self.min_v, self.max_v)
+                self.trajs[r][3][i] = zero_to_one(traj[r][c+3], self.min_theta, self.max_theta)
 
             # normalize the obstacles position (x,y)
             for c in range(0, self.param_len, 3):
-                self.params[r][c] = neg_one_to_one(param[r][c], self.min_x, self.max_x)
-                self.params[r][c+1] = neg_one_to_one(param[r][c+1], self.min_y, self.max_y)
-                self.params[r][c+2] = neg_one_to_one(param[r][c+2], self.min_r, self.max_r)
+                self.params[r][c] = zero_to_one(param[r][c], self.min_x, self.max_x)
+                self.params[r][c+1] = zero_to_one(param[r][c+1], self.min_y, self.max_y)
+                self.params[r][c+2] = zero_to_one(param[r][c+2], self.min_r, self.max_r)
 
     def un_normalize(self, traj, params):
         # traj: C, N
