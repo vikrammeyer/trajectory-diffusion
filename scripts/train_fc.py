@@ -3,8 +3,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from diff_traj.dataset.dataset import StateDataset
-from diff_traj.baselines.fc_trainer import Trainer
-from diff_traj.baselines.fcnet import FCNet
+from diff_traj.baselines.fcnet import FCNet, Trainer
 from diff_traj.cfg import cfg
 from diff_traj.utils.logs import setup_logging
 from diff_traj.utils.io import write_obj

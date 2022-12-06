@@ -28,9 +28,11 @@ def main():
 
     if args.dataset_type == 'state':
         channels = 1
+        seq_length = cfg.traj_length
         dataset = StateDataset(cfg, args.dataset_folder)
     elif args.dataset_type == 'channels':
         channels = 4
+        seq_length = cfg.n_intervals
         dataset = StateChannelsDataset(cfg, args.dataset_folder)
     else:
         raise ValueError("dataset type not supported")
@@ -48,7 +50,7 @@ def main():
 
     diffusion = GaussianDiffusion1D(
         model,
-        seq_length = cfg.traj_length,
+        seq_length = seq_length,
         timesteps = args.timesteps,
         sampling_timesteps = args.sampling_timesteps,   # number of sampling timesteps (using ddim for faster inference [see citation for ddim paper])
         loss_type = args.loss_type,
