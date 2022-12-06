@@ -3,6 +3,7 @@ from torch.utils.data import DataLoader
 import wandb
 from ema_pytorch import EMA
 from tqdm.auto import tqdm
+from diff_traj.dataset.dataset import StateDataset
 from diff_traj.diffusion.diffusion_utils import *
 from diff_traj.viz import Visualizations
 from diff_traj.utils.eval import n_collision_states, dynamics_violations
@@ -41,6 +42,7 @@ class Trainer1D:
         self.train_num_steps = train_num_steps
         self.seq_length = diffusion_model.seq_length
 
+        self.dt = "state" if type(dataset) == StateDataset else "channels"
         self.ds = dataset
         dl = DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True)
 
@@ -126,26 +128,19 @@ class Trainer1D:
 
                     with torch.no_grad():
                         sampled_trajs = self.ema.ema_model.sample(cond_vecs = test_params).detach().squeeze().cpu().numpy()
-                        imgs = []
+
                         for i in range(sampled_trajs.shape[0]):
                             traj, param = un_norm(sampled_trajs[i], test_params_np[i])
-                            fname = str(self.results_folder/f'{milestone}-{i}.png')
-                            self.viz.save_trajectory(traj, param, fname)
-                            imgs.append(wandb.Image(fname))
+                            self.viz.save_trajectory(traj, param, self.results_folder/f'{milestone}-{i}.png')
 
-                        self.run.log({"Trajectories": imgs})
                     self.save(milestone)
 
                 pbar.update(1)
 
-        imgs = []
         for i in range(test_trajs.shape[0]):
             traj, param = un_norm(test_trajs_np[i], test_params_np[i])
-            fname = str(self.results_folder/f'gt-{i}.png')
-            self.viz.save_trajectory(traj, param, fname)
-            imgs.append(wandb.Image(fname, caption="Ground Truth"))
+            self.viz.save_trajectory(traj, param, self.results_folder/f'gt-{i}.png')
 
-        self.run.log({"Trajectories": imgs})
 
     @torch.inference_mode()
     def evaluate(self, test_dataset):

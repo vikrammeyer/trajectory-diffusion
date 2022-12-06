@@ -130,9 +130,9 @@ class StateChannelsDataset(torch.utils.data.Dataset):
         min_r = cfg.min_obst_radius
         max_r = cfg.max_obst_radius
 
-        # store each (x,y,v theta) and (x, y, r) in a separate channel for trajectories and params
+        # store each (x,y,v theta) in a separate channel for trajectories
         trajs = torch.zeros((n_trajs, 4, cfg.n_intervals))
-        params = torch.zeros((n_trajs, 3, cfg.n_obstacles))
+        params = torch.zeros((n_trajs, param_len))
 
         # Normalize the trajectories and obstacles to be in range [-1, 1] for each of their features
         for r in range(n_trajs):
@@ -143,10 +143,10 @@ class StateChannelsDataset(torch.utils.data.Dataset):
                 trajs[r][3][i] = math.cos(traj[r][c+3]) # encode the heading theta (radians) as cos theta
 
             # normalize the obstacles position (x,y)
-            for i, c in enumerate(range(0, param_len, 3)):
-                params[r][0][i] = (param[r][c] - min_x) / (max_x - min_x)
-                params[r][1][i] = (param[r][c+1] - min_y) / (max_y - min_y)
-                params[r][2][i] = (param[r][c+2] - min_r) / (max_r - min_r)
+            for c in range(0, param_len, 3):
+                params[r][c] = (param[r][c] - min_x) / (max_x - min_x)
+                params[r][c+1] = (param[r][c+1] - min_y) / (max_y - min_y)
+                params[r][c+2] = (param[r][c+2] - min_r) / (max_r - min_r)
 
         self.n_trajs = n_trajs
         self.traj_len = traj_len
@@ -176,17 +176,16 @@ class StateChannelsDataset(torch.utils.data.Dataset):
             new_traj[c+3] = math.acos(clamp(traj[3][i])) # acos domain is [-1, 1] and predictions are noisy
 
         new_param = np.zeros(self.param_len)
-        for i, c in enumerate(range(0, self.param_len, 3)):
-            new_param[c] = params[0][i] * (self.max_x - self.min_x) + self.min_x
-            new_param[c+1] = params[1][i] * (self.max_y - self.min_y) + self.min_y
-            new_param[c+2] = params[2][i] * (self.max_r - self.min_r) + self.min_r
+        for c in range(0, self.param_len, 3):
+            new_param[c] = params[c] * (self.max_x - self.min_x) + self.min_x
+            new_param[c+1] = params[c+1] * (self.max_y - self.min_y) + self.min_y
+            new_param[c+2] = params[c+2] * (self.max_r - self.min_r) + self.min_r
 
         return new_traj, new_param
 
     def __getitem__(self, idx):
         # unsqueeze to add a single channel dimension to work with Unet1D
         return self.trajs[idx], self.params[idx]
-        # TODO: idk if params can handle having multiple channels b/c rn it is just concatenated?? for cfg
 
     def __len__(self):
         return self.n_trajs
