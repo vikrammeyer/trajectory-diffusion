@@ -97,7 +97,7 @@ class Trainer:
 
                 for _ in range(self.gradient_accumulate_every):
                     trajs, params = next(self.dl)
-                    trajs, params = trajs.to(self.dev), params.to(self.dev)
+                    trajs, params = trajs.squeeze().to(self.dev), params.to(self.dev)
 
                     preds = self.model(params)
 
