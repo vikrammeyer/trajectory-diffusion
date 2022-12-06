@@ -1,16 +1,16 @@
 import torch
-from torch.utils.data import DataLoader
 import wandb
+
 from ema_pytorch import EMA
 from tqdm.auto import tqdm
-from diff_traj.diffusion.diffusion_utils import *
 from diff_traj.viz import Visualizations
+from diff_traj.diffusion.diffusion_utils import cycle
 from diff_traj.utils.eval import n_collision_states, dynamics_violations
 
-class Trainer1D:
+class Trainer:
     def __init__(
         self,
-        diffusion_model,
+        model,
         dataset,
         cfg,
         results_folder,
@@ -29,9 +29,8 @@ class Trainer1D:
         super().__init__()
 
         self.dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = diffusion_model.to(self.dev)
+        self.model = model.to(self.dev)
 
-        assert has_int_squareroot(num_samples), 'number of samples must have an integer square root'
         self.num_samples = num_samples
         self.save_and_sample_every = save_and_sample_every
 
@@ -39,16 +38,13 @@ class Trainer1D:
         self.gradient_accumulate_every = gradient_accumulate_every
 
         self.train_num_steps = train_num_steps
-        self.seq_length = diffusion_model.seq_length
 
         self.ds = dataset
-        dl = DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True)
+        self.dl = cycle(torch.utils.data.DataLoader(self.ds, batch_size = train_batch_size, shuffle = True, pin_memory = True))
 
-        self.dl = cycle(dl)
+        self.opt = torch.optim.Adam(self.model.parameters(), lr = train_lr, betas = adam_betas)
 
-        self.opt = torch.optim.Adam(diffusion_model.parameters(), lr = train_lr, betas = adam_betas)
-
-        self.ema = EMA(diffusion_model, beta = ema_decay, update_every = ema_update_every)
+        self.ema = EMA(self.model, beta = ema_decay, update_every = ema_update_every)
 
         self.results_folder = results_folder
 
@@ -58,7 +54,7 @@ class Trainer1D:
 
         self.debug_mode = debug_mode
         if not self.debug_mode:
-            self.run = wandb.init(project="trajectory-diffusion", entity="vikram-meyer", job_type="train_diffusion")
+            self.run = wandb.init(project="trajectory-diffusion", entity="vikram-meyer", job_type="train_fcnet")
 
     def save(self, milestone):
         data = {
@@ -103,7 +99,10 @@ class Trainer1D:
                     trajs, params = next(self.dl)
                     trajs, params = trajs.to(self.dev), params.to(self.dev)
 
-                    loss = self.model(trajs, cond_vecs = params)
+                    preds = self.model(params)
+
+                    loss = torch.nn.functional.mse_loss(trajs, preds)
+
                     loss = loss / self.gradient_accumulate_every
                     total_loss += loss.item()
 
@@ -125,38 +124,34 @@ class Trainer1D:
                     milestone = self.step // self.save_and_sample_every
 
                     with torch.no_grad():
-                        sampled_trajs = self.ema.ema_model.sample(cond_vecs = test_params).detach().squeeze().cpu().numpy()
-                        imgs = []
-                        for i in range(sampled_trajs.shape[0]):
-                            traj, param = un_norm(sampled_trajs[i], test_params_np[i])
+                        predicted_trajs = self.ema.ema_model(test_params).squeeze().cpu().numpy()
+
+                        for i in range(predicted_trajs.shape[0]):
+                            traj, param = un_norm(predicted_trajs[i], test_params_np[i])
                             fname = str(self.results_folder/f'{milestone}-{i}.png')
                             self.viz.save_trajectory(traj, param, fname)
-                            imgs.append(wandb.Image(fname))
 
-                        self.run.log({"Trajectories": imgs})
                     self.save(milestone)
 
                 pbar.update(1)
 
-        imgs = []
         for i in range(test_trajs.shape[0]):
             traj, param = un_norm(test_trajs_np[i], test_params_np[i])
             fname = str(self.results_folder/f'gt-{i}.png')
             self.viz.save_trajectory(traj, param, fname)
-            imgs.append(wandb.Image(fname, caption="Ground Truth"))
 
-        self.run.log({"Trajectories": imgs})
+        self.save('finished')
 
     @torch.inference_mode()
     def evaluate(self, test_dataset):
-        test_dl = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True, pin_memory=True)
+        test_dl = torch.utils.data.DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True, pin_memory=True)
 
         loss_fn = torch.nn.functional.mse_loss
         metrics = {'n_trajs': 0, 'n_collision_states': [], 'dynamics_violations': []}
         self.ema.ema_model.eval()
 
         for gt_trajs, params in test_dl:
-            sampled_trajs = self.ema.ema_model.sample(cond_vecs = params.to(self.dev)).squeeze().cpu()
+            sampled_trajs = self.ema.ema_model(params.to(self.dev)).squeeze().cpu()
             gt_trajs = gt_trajs.squeeze()
 
             for i in range(sampled_trajs.shape[0]):

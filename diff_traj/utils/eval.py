@@ -21,3 +21,6 @@ def n_collision_states(state_traj, obstacles):
             if collision(obst, car): collisions += 1
 
     return collisions
+
+def dynamics_violations(state_traj):
+    return 0.0

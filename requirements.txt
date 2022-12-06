@@ -5,4 +5,5 @@ tqdm
 accelerate
 casadi
 ema-pytorch
-knockknock
+einops
+wandb
