@@ -163,7 +163,7 @@ class Trainer:
 
     @torch.inference_mode()
     def sample(self, test_dataset):
-        test_dl = torch.utils.data.DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True, pin_memory=True)
+        test_dl = torch.utils.data.DataLoader(test_dataset, batch_size=self.batch_size, pin_memory=True)
 
         self.ema.ema_model.eval()
         for gt_trajs, params in test_dl:

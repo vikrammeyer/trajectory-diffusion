@@ -147,7 +147,7 @@ class Trainer1D:
     @torch.inference_mode()
     def sample(self, test_dataset):
         self.ema.ema_model.eval()
-        test_dl = DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True, pin_memory=True)
+        test_dl = DataLoader(test_dataset, batch_size=self.batch_size, pin_memory=True)
         for gt_trajs, params in test_dl:
             yield (gt_trajs, params, self.ema.ema_model.sample(cond_vecs = params.to(self.dev)).cpu())
 
