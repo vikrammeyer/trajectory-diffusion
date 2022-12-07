@@ -1,58 +1,99 @@
 from collections import namedtuple
 from dataclasses import dataclass
-import math
+from math import cos, sin, sqrt
 
 Point = namedtuple("Point", ["x", "y"])
 Circle = namedtuple("Circle", ["x", "y", "r"])
 Rect = namedtuple("Rect", ["a", "b", "c", "d"])
 
+@dataclass
+class Point:
+    x: float
+    y: float
 
-def standard_line(pt1, pt2):
-    """ Given two points (x1, y1) and (x2, y2)
-        return the coefficients for ax + by + c 0
-        https://math.stackexchange.com/questions/422602/convert-two-points-to-line-eq-ax-by-c-0
-    """
-    a = pt1.y - pt2.y
-    b = pt2.x - pt1.x
-    c = pt1.x * pt2.y - pt2.x * pt1.y
+    def __add__(self, other):
+        return Point(self.x + other.x, self.y + other.y)
 
-    return (a, b, c)
+def rotate(pt, theta):
+    # https://math.stackexchange.com/questions/2581058/rotating-rectangle-by-its-center
+    # equivalent of constructing a rotation matrix and multiplying the point/vec2D by it
+    return Point(pt.x * cos(theta) - pt.y * sin(theta), pt.x * sin(theta) + pt.y * cos(theta))
 
-def point_on_lhs(pt, start_pt, end_pt):
-    d = (start_pt.x - end_pt.x) * (pt.y - end_pt.y) - (pt.x - end_pt.x) * (start_pt.y - end_pt.y)
-    return d > 0
+def form_rect(x, y, theta, length, width):
+    center = Point(x,y)
+    l2 = length / 2
+    w2 = width / 2
+
+    # construct car rect at origin, rotate appropriately and then translate to its actual position
+    a = rotate(Point(-l2, -w2), theta) + center
+    b = rotate(Point(l2, -w2), theta) + center
+    c = rotate(Point(-l2, w2), theta) + center
+    d = rotate(Point(l2, w2), theta) + center
+
+    return Rect(a,b,c,d)
+
+def dot(pt1, pt2):
+    return pt1.x * pt2.x + pt1.y * pt2.y
+
+def vec(pt1, pt2):
+    return Point(pt2.x - pt1.x, pt2.y - pt1.y)
 
 def point_in_rect(pt, rect):
     """ Check if the point lies in the rectangle
         https://stackoverflow.com/questions/2752725/finding-whether-a-point-lies-inside-a-rectangle-or-not
     """
-    return point_on_lhs(pt, rect.a, rect.d) or \
-            point_on_lhs(pt, rect.d, rect.c) or \
-            point_on_lhs(pt, rect.c, rect.b) or \
-            point_on_lhs(pt, rect.b, rect.a)
+    ab = vec(rect.a, rect.b)
+    am = vec(rect.a, pt)
+    bc = vec(rect.b, rect.c)
+    bm = vec(rect.b, pt)
+
+    return 0 <= dot(ab, am) <= dot(ab, ab) and 0 <= dot(bc, bm) <= dot(bc, bc)
 
 def intersect_circle(circle, pt1, pt2):
     """ Determine if the line segemnt between pt1 and pt2 intersects with the circle
         https://math.stackexchange.com/questions/275529/check-if-line-intersects-with-circles-perimeter
-        https://www.geeksforgeeks.org/check-line-touches-intersects-circle/
+        (2nd answer that works for line segments)
     """
-    a, b, c = standard_line(pt1, pt2) # (x1, y1), (x2,y2) to ax + by + c = 0
 
-    dist_line_to_center = ((abs(a * circle.x + b * circle.y + c) / math.sqrt(a**2 + b**2)))
+    ax = pt1.x - circle.x
+    ay = pt1.y - circle.y
+    bx = pt2.x - circle.x
+    by = pt2.y - circle.y
 
-    return circle.radius > dist_line_to_center
+    a = (bx - ax)**2 + (by - ay)**2
+    b = 2*(ax*(bx - ax) + ay*(by - ay))
+    c = ax**2 + ay**2 - circle.r**2
+
+    disc = b**2 - 4*a*c
+    if disc <= 0: return False
+    sqrtdisc = sqrt(disc)
+
+    t1 = (-b + sqrtdisc) / (2*a)
+    t2 = (-b - sqrtdisc) / (2*a)
+
+    if (0 < t1 < 1) or (0 < t2 < 1): return True
+
+    return False
 
 def collision(C: Circle, R: Rect):
-    return point_in_rect(Point(C.x, C.y), R) or \
-            intersect_circle(C, (R.a, R.b)) or \
-            intersect_circle(C, (R.b, R.c)) or \
-            intersect_circle(C, (R.c, R.d)) or \
-            intersect_circle(C, (R.d, R.a))
+    """ https://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
+        (2nd answer for non-axis aligned)
+    """
+    return (point_in_rect(Point(C.x, C.y), R) or
+            intersect_circle(C, R.a, R.b) or
+            intersect_circle(C, R.b, R.c) or
+            intersect_circle(C, R.c, R.d) or
+            intersect_circle(C, R.d, R.a))
 
 if __name__ == "__main__":
-    r = Rect(Point(1,2), Point(3,2), Point(3,1), Point(1,1))
-    c = Circle(4, 3, 2)
-    c2 = Circle(12, 1, 1)
+    r = Rect(Point(1,2), Point(1,1), Point(3,1), Point(3,2))
+    p = Point(2,1.5)
+    assert point_in_rect(p, r)
 
+    c = Circle(4, 3, 2)
+    assert not point_in_rect(Point(c.x, c.y), r)
     assert collision(c, r)
+
+    c2 = Circle(8, 2, 1)
+    assert not point_in_rect(Point(c2.x, c2.y), r)
     assert not collision(c2, r)
