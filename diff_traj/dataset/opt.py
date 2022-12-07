@@ -1,6 +1,17 @@
 import numpy as np
 from casadi import MX, Opti, cos, sin, pi
 
+# x_k = f(x_{k-1}, u_k)
+def dynamics(x: MX, u: MX, t: float) -> MX:
+    """ Casadi MX unicycle dynamics """
+    nxt_x = MX(4, 1)
+    nxt_x[0] = x[0] + t * x[2] * cos(x[3])
+    nxt_x[1] = x[1] + t * x[2] * sin(x[3])
+    nxt_x[2] = x[2] + t * u[0]
+    nxt_x[3] = x[3] + t * u[1]
+    return nxt_x
+
+
 def setup_problem(cfg, casadi_options = {}, solver_options = {'print_level': 0 }) -> Opti:
     """ Setup the optimization problem where the decision variables are the state trajectory
         and control trajectory: [x,y,v,theta] and [accel, ang vel]
@@ -101,16 +112,6 @@ def setup_problem(cfg, casadi_options = {}, solver_options = {'print_level': 0 }
     )
 
     # Vehicle Dynamics Constraints
-    # x_k = f(x_{k-1}, u_k)
-    def dynamics(x: MX, u: MX, t: float) -> MX:
-        """ Casadi MX unicycle dynamics """
-        nxt_x = MX(4, 1)
-        nxt_x[0] = x[0] + t * x[2] * cos(x[3])
-        nxt_x[1] = x[1] + t * x[2] * sin(x[3])
-        nxt_x[2] = x[2] + t * u[0]
-        nxt_x[3] = x[3] + t * u[1]
-        return nxt_x
-
     problem.subject_to(traj[:4] == dynamics(x0, u[:2], cfg.interval_dur))
 
     j = 2

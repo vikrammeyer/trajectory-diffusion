@@ -2,11 +2,11 @@ import json
 import pathlib
 import pickle
 
-def write_obj(obj, filename: pathlib.Path):
+def write_obj(obj, filename):
     with open(filename, "wb") as f:
         pickle.dump(obj, f)
 
-def read_file(filename: pathlib.Path):
+def read_file(filename):
     with open(filename, "rb") as f:
         return pickle.load(f)
 
