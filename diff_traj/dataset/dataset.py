@@ -80,8 +80,8 @@ class StateDataset(torch.utils.data.Dataset):
         new_param = np.zeros(self.param_len)
         for c in range(0, self.param_len, 3):
             new_param[c] = unnormalize(params[c], self.min_x, self.max_x)
-            new_param[c+1] = unnormalize(params[c], self.min_y, self.max_y)
-            new_param[c+2] = unnormalize(params[c], self.min_r, self.max_r)
+            new_param[c+1] = unnormalize(params[c+1], self.min_y, self.max_y)
+            new_param[c+2] = unnormalize(params[c+2], self.min_r, self.max_r)
 
         return new_traj, new_param
 
@@ -163,8 +163,8 @@ class StateChannelsDataset(torch.utils.data.Dataset):
         new_param = np.zeros(self.param_len)
         for c in range(0, self.param_len, 3):
             new_param[c] = unnormalize(params[c], self.min_x, self.max_x)
-            new_param[c+1] = unnormalize(params[c], self.min_y, self.max_y)
-            new_param[c+2] = unnormalize(params[c], self.min_r, self.max_r)
+            new_param[c+1] = unnormalize(params[c+1], self.min_y, self.max_y)
+            new_param[c+2] = unnormalize(params[c+2], self.min_r, self.max_r)
 
         return new_traj, new_param
 

@@ -141,6 +141,7 @@ class Trainer1D:
             traj, param = un_norm(test_trajs_np[i], test_params_np[i])
             self.viz.save_trajectory(traj, param, self.results_folder/f'gt-{i}.png')
 
+        self.save('finished')
 
     @torch.inference_mode()
     def evaluate(self, test_dataset):
