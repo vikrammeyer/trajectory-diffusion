@@ -64,10 +64,10 @@ def main():
         debug_mode = True
     )
 
-    for checkpoint in range(1, 100):
+    for checkpoint in [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 99]:
         trainer.load(f'{args.milestone_folder}/model-{checkpoint}.pt')
         for i, obj in enumerate(trainer.sample(dataset), 1):
-            write_obj(obj, output_folder/f'sampled-{i}.pkl')
+            write_obj(obj, output_folder/f'{checkpoint}-sampled-{i}.pkl')
 
         logging.info('finished logging checkpoint %s', checkpoint)
 
