@@ -6,7 +6,7 @@ from ema_pytorch import EMA
 from tqdm.auto import tqdm
 from diff_traj.viz import Visualizations
 from diff_traj.diffusion.diffusion_utils import cycle
-from diff_traj.utils.eval import n_collision_states, dynamics_violations
+# from diff_traj.utils.eval import n_collision_states, dynamics_violations
 
 class FCNet(nn.Module):
     def __init__(self, layer_sizes) -> None:
@@ -162,31 +162,39 @@ class Trainer:
         self.save('finished')
 
     @torch.inference_mode()
-    def evaluate(self, test_dataset):
+    def sample(self, test_dataset):
         test_dl = torch.utils.data.DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True, pin_memory=True)
 
-        loss_fn = torch.nn.functional.mse_loss
-        metrics = {'n_trajs': 0, 'n_collision_states': [], 'dynamics_violations': []}
         self.ema.ema_model.eval()
-
         for gt_trajs, params in test_dl:
-            sampled_trajs = self.ema.ema_model(params.to(self.dev)).squeeze().cpu()
-            gt_trajs = gt_trajs.squeeze()
+            yield (gt_trajs, params, self.ema.ema_model(params.to(self.dev)).cpu())
 
-            for i in range(sampled_trajs.shape[0]):
-                metrics["n_trajs"] += 1
+    # @torch.inference_mode()
+    # def evaluate(self, test_dataset):
+    #     test_dl = torch.utils.data.DataLoader(test_dataset, batch_size=self.batch_size, shuffle=True, pin_memory=True)
 
-                traj, param = test_dataset.un_normalize(sampled_trajs[i], params[i])
+    #     loss_fn = torch.nn.functional.mse_loss
+    #     metrics = {'n_trajs': 0, 'n_collision_states': [], 'dynamics_violations': []}
+    #     self.ema.ema_model.eval()
 
-                # Collision Free States Metric
-                metrics['n_collision_states'].append(n_collision_states(traj, param))
+    #     for gt_trajs, params in test_dl:
+    #         sampled_trajs = self.ema.ema_model(params.to(self.dev)).squeeze().cpu()
+    #         gt_trajs = gt_trajs.squeeze()
 
-                # Dynamics Violation Metric
-                metrics['dynamics_violations'].append(dynamics_violations(traj))
+    #         for i in range(sampled_trajs.shape[0]):
+    #             metrics["n_trajs"] += 1
 
-                # MSE w Ground Truth Metric
-                metrics['mse_gt'].append(loss_fn(sampled_trajs[i],gt_trajs[i]).item())
+    #             traj, param = test_dataset.un_normalize(sampled_trajs[i], params[i])
 
-                self.viz.save_trajectory(traj, param, self.results_folder/f'{metrics["n_trajs"]}.png')
+    #             # Collision Free States Metric
+    #             metrics['n_collision_states'].append(n_collision_states(traj, param))
 
-        return metrics
+    #             # Dynamics Violation Metric
+    #             metrics['dynamics_violations'].append(dynamics_violations(traj))
+
+    #             # MSE w Ground Truth Metric
+    #             metrics['mse_gt'].append(loss_fn(sampled_trajs[i],gt_trajs[i]).item())
+
+    #             self.viz.save_trajectory(traj, param, self.results_folder/f'{metrics["n_trajs"]}.png')
+
+    #     return metrics
