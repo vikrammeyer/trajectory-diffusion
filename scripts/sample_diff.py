@@ -11,7 +11,7 @@ import argparse
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model',required=True)
+    parser.add_argument('-m', '--milestone_folder',required=True)
     parser.add_argument('-t', '--timesteps', type=int, default=1000)
     parser.add_argument('-st', '--sampling_timesteps', type=int, default=25)
     parser.add_argument('-l', '--loss_type', default='l2', help='l1, l2')
@@ -24,7 +24,7 @@ def main():
     output_folder = Path(args.output_folder)
     output_folder.mkdir(exist_ok = True)
     now = datetime.now().strftime("%b-%d-%H-%M-%S")
-    setup_logging(args.log_level, True, output_folder/f"eval-diff-{now}.log")
+    setup_logging(args.log_level, True, output_folder/f"sample-diff-{now}.log")
 
     channels=1
     dataset = StateDataset(cfg, args.dataset_folder)
@@ -63,14 +63,13 @@ def main():
         ema_decay = 0.995,
         debug_mode = True
     )
-    trainer.load(args.model)
-    logging.info('built trainer and loaded model checkpoint')
 
-    metrics = trainer.evaluate(dataset)
+    for checkpoint in range(1, 100):
+        trainer.load(f'{args.milestone_folder}/model-{checkpoint}.pt')
+        for i, obj in enumerate(trainer.sample(dataset), 1):
+            write_obj(obj, output_folder/f'sampled-{i}.pkl')
 
-    write_obj(metrics, output_folder/"metrics-diff.pkl")
-
-    logging.info("finished evaluation of diffusion model")
+        logging.info('finished logging checkpoint %s', checkpoint)
 
 if __name__ == '__main__':
     main()
