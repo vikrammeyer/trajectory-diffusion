@@ -1,8 +1,10 @@
-from diff_traj.cfg import cfg
-from diff_traj.utils.geometry import *
-from casadi import *
-from diff_traj.dataset.opt import dynamics
 import numpy as np
+from casadi import *
+
+from diff_traj.cfg import cfg
+from diff_traj.dataset.opt import dynamics
+from diff_traj.utils.geometry import *
+
 
 def n_collision_states(cfg, state_traj, obstacles):
     obsts = []
@@ -11,14 +13,18 @@ def n_collision_states(cfg, state_traj, obstacles):
         obsts.append(Circle(x, y, r))
 
     collisions = 0
+    state_obst_idx = []
+    state_idx = 0
     for i in range(0, len(state_traj), 4):
-        x, y, _,  theta = state_traj[i:i+4]
+        x, y, _, theta = state_traj[i:i+4]
 
         car = form_rect(x, y, theta, cfg.car_length, cfg.car_width)
-        for obst in obsts:
-            if collision(obst, car): collisions += 1
-
-    return collisions
+        for j, obst in enumerate(obsts):
+            if collision(obst, car):
+                collisions += 1
+                state_obst_idx.append([state_idx, j])
+        state_idx +=  1
+    return collisions, state_obst_idx
 
 def dynamics_violation(cfg, state_traj):
     problem = Opti()
