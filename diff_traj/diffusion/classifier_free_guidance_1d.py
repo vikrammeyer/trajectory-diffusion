@@ -88,8 +88,6 @@ class Block(nn.Module):
 class ResnetBlock(nn.Module):
     def __init__(self, dim, dim_out, *, time_emb_dim = None, cond_emb_dim = None, groups = 8):
         super().__init__()
-        # print(f'time emb dim: {time_emb_dim}')
-        # print(f'cond emb dim: {cond_emb_dim}')
 
         self.mlp = nn.Sequential(
             nn.SiLU(),
@@ -106,12 +104,7 @@ class ResnetBlock(nn.Module):
         if exists(self.mlp) and (exists(time_emb) or exists(cond_emb)):
             full_cond_emb = tuple(filter(exists, (time_emb, cond_emb)))
             full_cond_emb = torch.cat(full_cond_emb, dim=-1)
-            # print('------------')
-            # print(time_emb.shape)
-            # print(cond_emb.shape)
-            # print(full_cond_emb.shape)
-            # print(self.mlp)
-            # print('------------')
+
             full_cond_emb = self.mlp(full_cond_emb)
             full_cond_emb = rearrange(full_cond_emb, 'b c -> b c 1')
             scale_shift = full_cond_emb.chunk(2, dim = 1)
@@ -211,8 +204,7 @@ class Unet1D(nn.Module):
             nn.Linear(time_dim, time_dim)
         )
 
-        # conditioning/parameter vector embeddings
-        # TODO: can make cond_mlp more expressive if still not getting good results
+        # conditioning vector embeddings
         self.cond_mlp = nn.Linear(cond_dim, dim)
         self.null_cond_emb = nn.Parameter(torch.randn(cond_dim))
 
