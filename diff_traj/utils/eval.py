@@ -18,7 +18,7 @@ def n_collision_states(cfg, state_traj, obstacles):
     for i in range(0, len(state_traj), 4):
         x, y, _, theta = state_traj[i:i+4]
 
-        car = form_rect(x, y, theta, cfg.car_length, cfg.car_width)
+        car = form_rect(x, y, theta, cfg.car_width, cfg.car_length)
         for j, obst in enumerate(obsts):
             if collision(obst, car):
                 collisions += 1

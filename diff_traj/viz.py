@@ -39,7 +39,7 @@ class Visualizations:
     def save_trajectory(self, x, obstacles, file_name,title='', state_obst_idx=[]):
         fig, ax = plt.subplots()
         self.plot_trajectory(ax, obstacles, x, state_obst_idx=state_obst_idx)
-        plt.title(title)
+        if title != '': plt.title(title)
         fig.savefig(file_name)
 
         plt.close(fig)
@@ -77,6 +77,7 @@ class Visualizations:
         for i in range(0,len(obstacles),3):
             if i // 3 in highlight_obstacles:
                 obst = Circle((obstacles[i],obstacles[i+1]),obstacles[i+2],fill=True, color='green')
+                print(f'Obstacle {i//3}: {obstacles[i:i+3]}')
             else:
                 obst = Circle((obstacles[i],obstacles[i+1]),obstacles[i+2],fill=True)
             buffer = Circle((obstacles[i],obstacles[i+1]),obstacles[i+2] + self.car_width,fill=False)
@@ -87,5 +88,6 @@ class Visualizations:
         for i in range(0,len(x),4):
             if i // 4 in highlight_states:
                 self.plot_car(ax, x[i:i+4], color='red')
+                print(f'State {i//4}: {x[i:i+4]}')
             else:
                 self.plot_car(ax, x[i:i+4])

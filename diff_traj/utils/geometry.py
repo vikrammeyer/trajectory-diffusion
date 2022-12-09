@@ -86,6 +86,7 @@ def collision(C: Circle, R: Rect):
             intersect_circle(C, R.d, R.a))
 
 if __name__ == "__main__":
+    from diff_traj.cfg import cfg
     r = Rect(Point(1,2), Point(1,1), Point(3,1), Point(3,2))
     p = Point(2,1.5)
     assert point_in_rect(p, r)
@@ -97,3 +98,22 @@ if __name__ == "__main__":
     c2 = Circle(8, 2, 1)
     assert not point_in_rect(Point(c2.x, c2.y), r)
     assert not collision(c2, r)
+
+    # Issues that occur if car length and width are wrong (should be collision free for all of them)
+    # (S18, O1), (19, 1), (26,0), (31, 2), (32,3)
+    # Obstacle 0: [19.83637047 -7.77676535  2.43013287]
+    # Obstacle 1: [12.3777914   6.1901207   2.40626478]
+    # Obstacle 2: [31.11339951 -5.0329566   2.13223362]
+    # State 18: [10.68750095  0.          4.75        0]
+    # State 19: [11.875       0.          4.99999809  0]
+    # State 26: [21.9375  0.      6.75    0.    ]
+    # State 31: [31.  0.  8.  0.]
+    # State 32: [33.    0.    8.25  0.  ]
+
+    o0 = Circle(19.83637047, -7.77676535,  2.43013287)
+    o1 = Circle(12.3777914, 6.1901207, 2.40626478)
+    o2 = Circle(31.11339951, -5.0329566, 2.13223362)
+
+    s18 = form_rect(10.68750095, 0, 0, cfg.car_width, cfg.car_length)
+
+    assert not collision(o1, s18)
