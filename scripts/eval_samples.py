@@ -22,7 +22,7 @@ def main():
     collision_free = 0
     n_total = 0
 
-    for checkpoint in [99]: #[1, 10, 20 ,30 , 40, 50, 60, 70, 80, 90, 99]:
+    for checkpoint in [10, 20 ,30 , 40, 50, 60, 70, 80, 90, 99]:
         files =  list(sample_folder.glob(f'{checkpoint}-sampled-*.pkl'))
         files.sort()
 
@@ -38,12 +38,12 @@ def main():
             for i in range(0, sampled_trajs.shape[0]):
                 gt_traj, param = dataset.un_normalize(gt_trajs[i], params[i])
                 traj, _ = dataset.un_normalize(sampled_trajs[i], params[i])
-                # violation, energy = dynamics_violation(cfg, traj)
-                # violations.append(violation)
-                # energys.append(energy)
+                violation, energy = dynamics_violation(cfg, traj)
+                violations.append(violation)
+                energys.append(energy)
                 if n_collision_states(cfg, traj, param) == 0: collision_free += 1
                 n_total += 1
-                # collision_states.append(n_collision_states(cfg, traj, param))
+                collision_states.append(n_collision_states(cfg, traj, param))
 
         print('-----------------------------------')
         print(f'Checkpoint {checkpoint}')
@@ -52,24 +52,24 @@ def main():
         print(collision_free)
         print(n_total)
 
-    #     print('dynamics violations per trajectory:')
-    #     print(f'mean: {statistics.mean(violations):4f}')
-    #     print(f'std: {statistics.stdev(violations):4f}')
+        print('dynamics violations per trajectory:')
+        print(f'mean: {statistics.mean(violations):4f}')
+        print(f'std: {statistics.stdev(violations):4f}')
 
-    #     print('associated energy per trajectory:')
-    #     print(f'mean: {statistics.mean(energys):4f}')
-    #     print(f'std: {statistics.stdev(energys):4f}')
+        print('associated energy per trajectory:')
+        print(f'mean: {statistics.mean(energys):4f}')
+        print(f'std: {statistics.stdev(energys):4f}')
 
-    #     print('# collision states per trajectory')
-    #     print(f'mean: {statistics.mean(collision_states):4f}')
-    #     print(f'std: {statistics.stdev(collision_states):4f}')
+        print('# collision states per trajectory')
+        print(f'mean: {statistics.mean(collision_states):4f}')
+        print(f'std: {statistics.stdev(collision_states):4f}')
 
-    #     metrics_checkpoints['violations'].append(violations)
-    #     metrics_checkpoints['energys'].append(energys)
-    #     metrics_checkpoints['collision_states'].append(collision_states)
+        metrics_checkpoints['violations'].append(violations)
+        metrics_checkpoints['energys'].append(energys)
+        metrics_checkpoints['collision_states'].append(collision_states)
 
-    # print('done')
-    # write_obj(metrics_checkpoints, 'results/baseline-metrics.pkl')
+    print('done')
+    write_obj(metrics_checkpoints, 'results/diff-collision.pkl')
 
 if __name__ == '__main__':
     main()
