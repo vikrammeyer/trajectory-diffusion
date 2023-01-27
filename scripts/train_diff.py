@@ -15,7 +15,6 @@ def main():
     parser.add_argument('-st', '--sampling_timesteps', type=int, default=25)
     parser.add_argument('-l', '--loss_type', default='l2', help='l1, l2')
     parser.add_argument('-b', '--beta_schedule', default='cosine', help='linear, cosine')
-    parser.add_argument('-dt', '--dataset_type', default='state', help='state, channels')
     parser.add_argument('-d', '--dataset_folder', default='./data/subset/')
     parser.add_argument('-o', '--output_folder', default='./results/demo/')
     parser.add_argument('-ll', '--log_level', default='INFO', help='DEBUG, INFO, WARNING, ERROR')
@@ -26,16 +25,9 @@ def main():
     now = datetime.now().strftime("%b-%d-%H-%M-%S")
     setup_logging(args.log_level, True, output_folder/f"train-diff-{now}.log")
 
-    if args.dataset_type == 'state':
-        channels = 1
-        seq_length = cfg.traj_length
-        dataset = StateDataset(cfg, args.dataset_folder)
-    elif args.dataset_type == 'channels':
-        channels = 4
-        seq_length = cfg.n_intervals
-        dataset = StateChannelsDataset(cfg, args.dataset_folder)
-    else:
-        raise ValueError("dataset type not supported")
+    channels = 1
+    seq_length = cfg.traj_length
+    dataset = StateDataset(cfg, args.dataset_folder)
 
     logging.info('loaded dataset')
 

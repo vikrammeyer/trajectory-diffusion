@@ -1,9 +1,10 @@
 import numpy as np
-from casadi import MX, Opti, cos, sin, pi
+from casadi import MX, Opti, cos, sin
 
-# x_k = f(x_{k-1}, u_k)
 def dynamics(x: MX, u: MX, t: float) -> MX:
-    """ Casadi MX unicycle dynamics """
+    """ Casadi MX unicycle dynamics
+        x_k = f(x_{k-1}, u_k)
+    """
     nxt_x = MX(4, 1)
     nxt_x[0] = x[0] + t * x[2] * cos(x[3])
     nxt_x[1] = x[1] + t * x[2] * sin(x[3])

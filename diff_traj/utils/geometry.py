@@ -86,6 +86,7 @@ def collision(C: Circle, R: Rect):
             intersect_circle(C, R.d, R.a))
 
 if __name__ == "__main__":
+    from diff_traj.cfg import cfg
     r = Rect(Point(1,2), Point(1,1), Point(3,1), Point(3,2))
     p = Point(2,1.5)
     assert point_in_rect(p, r)
@@ -97,3 +98,42 @@ if __name__ == "__main__":
     c2 = Circle(8, 2, 1)
     assert not point_in_rect(Point(c2.x, c2.y), r)
     assert not collision(c2, r)
+
+    # Issues that occur if car length and width are wrong (should be collision free for all of them)
+    # (S18, O1), (19, 1), (26,0), (31, 2), (32,3)
+    # Obstacle 0: [19.83637047 -7.77676535  2.43013287]
+    # Obstacle 1: [12.3777914   6.1901207   2.40626478]
+    # Obstacle 2: [31.11339951 -5.0329566   2.13223362]
+    # State 18: [10.68750095  0.          4.75        0]
+    # State 19: [11.875       0.          4.99999809  0]
+    # State 26: [21.9375  0.      6.75    0.    ]
+    # State 31: [31.  0.  8.  0.]
+    # State 32: [33.    0.    8.25  0.  ]
+
+    o0 = Circle(19.83637047, -7.77676535,  2.43013287)
+    o1 = Circle(12.3777914, 6.1901207, 2.40626478)
+    o2 = Circle(31.11339951, -5.0329566, 2.13223362)
+
+    s18 = form_rect(10.68750095, 0, 0, cfg.car_width, cfg.car_length)
+
+    assert not collision(o1, s18)
+
+
+    # More weird numerical issues
+    # Obstacle 0: [22.32681656  2.87552452  2.48682308]
+    # Obstacle 1: [39.42609406  1.69980526  2.75029588]
+    # State 25: [20.27127647 -1.10565281  6.5        -0.15556586]
+    # State 26: [21.87665367 -1.35742855  6.75        0.09358335]
+    # State 27: [23.55676842 -1.19973755  7.          0.29575819]
+    # State 28: [25.23078537 -0.68967247  7.25        0.3133443 ]
+    # State 34: [35.5183754   4.85861301  8.75        0.43904358]
+    # State 35: [37.49841309  5.78846169  9.          0.18904358]
+    # State 36: [39.70832825  6.21128273  9.25       -0.06095648]
+    # State 37: [42.0165329   6.07040596  9.5        -0.31095642]
+
+    # o0 = Circle(22.32681656, 2.87552452, 2.48682308)
+    # o1 = Circle(39.42609406,  1.69980526,  2.75029588)
+
+    # s37 = form_rect(42.0165329,   6.07040596, -0.31095642, cfg.car_width, cfg.car_length)
+    # assert not collision(o1, s37)
+
