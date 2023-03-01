@@ -3,11 +3,11 @@ import random
 
 from casadi import *
 
-from trajdiff.dataset.obstacles import generate_obstacles
+from trajdiff.dataset.obstacles import generate_obstacles, generate_obstacles_w_constraints
 from trajdiff.dataset.opt import setup_problem
 
 
-def gen_samples(cfg, n, seed):
+def gen_samples(cfg, n, seed, constrain_obsts):
     random.seed(seed)
 
     samples = []
@@ -17,7 +17,7 @@ def gen_samples(cfg, n, seed):
     while len(samples) < n:
         try:
             (obst, x, u, duals, iters, t_proc, t_wall) = gen_and_solve_problem(
-                cfg, problem
+                cfg, problem, constrain_obsts
             )
 
             samples.append(
@@ -43,8 +43,11 @@ def gen_samples(cfg, n, seed):
     return samples
 
 
-def gen_and_solve_problem(cfg, problem):
-    obsts = generate_obstacles(cfg)
+def gen_and_solve_problem(cfg, problem, constrain_obsts=False):
+    if constrain_obsts:
+        obsts = generate_obstacles_w_constraints(cfg)
+    else:
+        obsts = generate_obstacles(cfg)
 
     problem.set_value(problem.p[4 : 4 + 3 * cfg.n_obstacles], obsts)
 

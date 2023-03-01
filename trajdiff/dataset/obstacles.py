@@ -39,3 +39,18 @@ def generate_obstacles(cfg):
             obst_idx += 3
 
     return obstacles
+
+
+def generate_obstacles_w_constraints(cfg):
+    dist_btw_obst_lines = cfg.car_horizon  / cfg.n_obstacles
+
+    obstacles = np.zeros(3 * cfg.n_obstacles, dtype=np.float32)
+    for i in range(cfg.n_obstacles):
+        x = dist_btw_obst_lines*(i+1)
+        # 5m buffer from lane boundaries for where obstacle centers can generate
+        y = rand_in_range(-cfg.lane_width / 2 + 5, cfg.lane_width / 2 - 5)
+        r = rand_in_range(cfg.min_obst_radius, cfg.max_obst_radius)
+
+        obstacles[3*i:3*i+3] = np.array([x, y, r], dtype=np.float32)
+
+    return obstacles

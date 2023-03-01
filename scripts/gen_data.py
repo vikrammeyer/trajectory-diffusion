@@ -43,6 +43,12 @@ def main():
         "--seed",
         default=42
     )
+    parser.add_argument(
+        "-c",
+        "--constrain_obsts",
+        default=False,
+        action='store_true'
+    )
     args = parser.parse_args()
 
     now = datetime.now().strftime("%b-%d-%H-%M-%S")
@@ -65,7 +71,7 @@ def main():
 
     with ProcessPoolExecutor(max_workers=args.processes) as executor:
 
-        futures = [executor.submit(gen_samples, cfg, args.n_per_file, seed) for seed in seeds]
+        futures = [executor.submit(gen_samples, cfg, args.n_per_file, seed, args.constrain_obsts) for seed in seeds]
 
         for i, future in enumerate(futures, 1):
             try:

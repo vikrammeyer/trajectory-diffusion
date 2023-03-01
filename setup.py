@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="diff_traj",
+    name="trajdiff",
     packages=find_packages()
 )
