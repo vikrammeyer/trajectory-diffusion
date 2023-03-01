@@ -2,11 +2,11 @@ import argparse
 import logging
 from pathlib import Path
 from datetime import datetime
-from diff_traj.diffusion.trainer import Trainer1D
-from diff_traj.dataset.dataset import StateChannelsDataset, StateDataset
-from diff_traj.diffusion.classifier_free_guidance_1d import Unet1D, GaussianDiffusion1D
-from diff_traj.cfg import cfg
-from diff_traj.utils.logs import setup_logging
+from trajdiff.diffusion.trainer import Trainer1D
+from trajdiff.dataset.dataset import StateChannelsDataset, StateDataset
+from trajdiff.diffusion.classifier_free_guidance_1d import Unet1D, GaussianDiffusion1D
+from trajdiff.cfg import cfg
+from trajdiff.utils import setup_logging
 
 def main():
     parser = argparse.ArgumentParser()

@@ -1,10 +1,10 @@
 import argparse
 from pathlib import Path
 
-from diff_traj.cfg import cfg
-from diff_traj.dataset.dataset import StateDataset
-from diff_traj.utils.io import read_file
-from diff_traj.viz import Visualizations
+from trajdiff.cfg import cfg
+from trajdiff.dataset.dataset import StateDataset
+from trajdiff.utils import read_file
+from trajdiff.viz import Visualizations
 
 
 def main():

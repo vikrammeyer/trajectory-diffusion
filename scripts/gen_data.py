@@ -5,11 +5,9 @@ from concurrent.futures import ProcessPoolExecutor
 import logging
 import pathlib
 from datetime import datetime
-from diff_traj.utils.logs import setup_logging
-from diff_traj.dataset.generator import gen_samples
-from diff_traj.cfg import cfg
-from diff_traj.utils.repro import set_seed
-import diff_traj.utils.io as io
+from trajdiff.utils import setup_logging, set_seed, write_metadata, write_obj
+from trajdiff.dataset.generator import gen_samples
+from trajdiff import cfg
 
 def main():
     parser = argparse.ArgumentParser()
@@ -53,7 +51,7 @@ def main():
     if not output_folder.is_dir():
         os.mkdir(output_folder)
 
-    io.write_metadata(cfg, output_folder)
+    write_metadata(cfg, output_folder)
 
     setup_logging(args.log_level, True, output_folder/f"data-gen-{now}.log")
 
@@ -73,7 +71,7 @@ def main():
             try:
                 results = future.result(timeout=timeout)
 
-                io.write_obj(results, pathlib.Path(f"{args.output_folder}/chunk{i}.pkl"))
+                write_obj(results, pathlib.Path(f"{args.output_folder}/chunk{i}.pkl"))
 
             except Exception as e:
                 logging.error("Error with generating a chunk of problems: ", e)

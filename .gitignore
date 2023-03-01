@@ -8,3 +8,4 @@ data/
 *.out
 wandb/
 results/
+stlcg-examples/

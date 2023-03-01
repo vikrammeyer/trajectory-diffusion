@@ -1,9 +1,10 @@
 import numpy as np
 from casadi import MX, Opti, cos, sin
 
+
 def dynamics(x: MX, u: MX, t: float) -> MX:
-    """ Casadi MX unicycle dynamics
-        x_k = f(x_{k-1}, u_k)
+    """Casadi MX unicycle dynamics
+    x_k = f(x_{k-1}, u_k)
     """
     nxt_x = MX(4, 1)
     nxt_x[0] = x[0] + t * x[2] * cos(x[3])
@@ -13,9 +14,9 @@ def dynamics(x: MX, u: MX, t: float) -> MX:
     return nxt_x
 
 
-def setup_problem(cfg, casadi_options = {}, solver_options = {'print_level': 0 }) -> Opti:
-    """ Setup the optimization problem where the decision variables are the state trajectory
-        and control trajectory: [x,y,v,theta] and [accel, ang vel]
+def setup_problem(cfg, casadi_options={}, solver_options={"print_level": 0}) -> Opti:
+    """Setup the optimization problem where the decision variables are the state trajectory
+    and control trajectory: [x,y,v,theta] and [accel, ang vel]
     """
     n = cfg.n_intervals
 
@@ -23,11 +24,10 @@ def setup_problem(cfg, casadi_options = {}, solver_options = {'print_level': 0 }
     traj = problem.variable(4 * n)
     u = problem.variable(2 * n)
     x0 = problem.parameter(4)
-    problem.set_value(x0, np.array([0., 0., 0., 0.]))
+    problem.set_value(x0, np.array([0.0, 0.0, 0.0, 0.0]))
     obstacles = problem.parameter(3 * cfg.n_obstacles)
     t = problem.parameter()
     problem.set_value(t, cfg.interval_dur)
-
 
     ## Select Decision Variables
     select_x = MX(n, 4 * n)
@@ -48,8 +48,8 @@ def setup_problem(cfg, casadi_options = {}, solver_options = {'print_level': 0 }
     velocities = select_v @ traj
     thetas = select_theta @ traj
 
-    select_a = MX(n, 2*n)
-    select_w = MX(n, 2*n)
+    select_a = MX(n, 2 * n)
+    select_w = MX(n, 2 * n)
     j = 0
     for i in range(n):
         select_a[i, j] = 1
@@ -93,8 +93,9 @@ def setup_problem(cfg, casadi_options = {}, solver_options = {'print_level': 0 }
     # theta limits (0, 2pi)
     problem.subject_to(
         problem.bounded(
-            cfg.min_theta * MX.ones(n,1), thetas, cfg.max_theta * MX.ones(n,1)
-    ))
+            cfg.min_theta * MX.ones(n, 1), thetas, cfg.max_theta * MX.ones(n, 1)
+        )
+    )
 
     ## CONTROLS Constraints
 
@@ -134,12 +135,14 @@ def setup_problem(cfg, casadi_options = {}, solver_options = {'print_level': 0 }
 
     return problem
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     import math
     from types import SimpleNamespace
-    from diff_traj.dataset.obstacles import generate_obstacles
-    from diff_traj.viz import Visualizations
-    from diff_traj.cfg import cfg
+
+    from trajdiff.cfg import cfg
+    from trajdiff.dataset.obstacles import generate_obstacles
+    from trajdiff.viz import Visualizations
 
     # Can test different configurations here
     # in meters and seconds
@@ -167,13 +170,13 @@ if __name__ == '__main__':
     viz = Visualizations(cfg)
     obsts = generate_obstacles(cfg)
     problem = setup_problem(cfg)
-    problem.set_value(problem.p[4:4+3*cfg.n_obstacles], obsts)
-    problem.solver('ipopt')
+    problem.set_value(problem.p[4 : 4 + 3 * cfg.n_obstacles], obsts)
+    problem.solver("ipopt")
 
     try:
         sol = problem.solve()
-        viz.show_trajectory(sol.value(problem.x)[:cfg.traj_length], obsts)
+        viz.show_trajectory(sol.value(problem.x)[: cfg.traj_length], obsts)
 
     except RuntimeError as e:
         print(e)
-        viz.show_trajectory(problem.debug.value(problem.x)[:cfg.traj_length], obsts)
+        viz.show_trajectory(problem.debug.value(problem.x)[: cfg.traj_length], obsts)

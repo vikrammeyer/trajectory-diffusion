@@ -1,11 +1,10 @@
-from diff_traj.dataset.dataset import StateDataset
-from diff_traj.diffusion.classifier_free_guidance_1d import Unet1D, GaussianDiffusion1D
-from diff_traj.diffusion.trainer import Trainer1D
-from diff_traj.utils.io import write_obj
-from diff_traj.cfg import cfg
+from trajdiff.dataset.dataset import StateDataset
+from trajdiff.diffusion.classifier_free_guidance_1d import Unet1D, GaussianDiffusion1D
+from trajdiff.diffusion.trainer import Trainer1D
+from trajdiff.utils import setup_logging, write_obj
+from trajdiff.cfg import cfg
 import logging
 from datetime import datetime
-from diff_traj.utils.logs import setup_logging
 from pathlib import Path
 import argparse
 
