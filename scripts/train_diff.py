@@ -1,7 +1,6 @@
 import argparse
 import logging
 from pathlib import Path
-from datetime import datetime
 
 from trajdiff.diffusion import Trainer1D, Unet1D, GaussianDiffusion1D
 from trajdiff.dataset import StateDataset
@@ -22,8 +21,7 @@ def main():
 
     output_folder = Path(args.output_folder)
     output_folder.mkdir(exist_ok = True)
-    now = datetime.now().strftime("%b-%d-%H-%M-%S")
-    setup_logging(args.log_level, True, output_folder/f"train-diff-{now}.log")
+    setup_logging(args.log_level, True, output_folder/f"train-diffusion.log")
 
     channels = 1
     seq_length = cfg.traj_length
@@ -40,7 +38,7 @@ def main():
         model,
         seq_length = seq_length,
         timesteps = args.timesteps,
-        sampling_timesteps = args.sampling_timesteps,   # number of sampling timesteps (using ddim for faster inference [see citation for ddim paper])
+        sampling_timesteps = args.sampling_timesteps,   # using ddim for faster inference
         loss_type = args.loss_type,
         beta_schedule = args.beta_schedule
     )
@@ -50,13 +48,12 @@ def main():
     trainer = Trainer1D(
         diffusion,
         dataset,
-        cfg,
         results_folder = output_folder,
         train_batch_size = 32,
         train_lr = 8e-5,
-        train_num_steps = args.train_steps,         # total training steps
-        gradient_accumulate_every = 2,              # gradient accumulation steps
-        ema_decay = 0.995,                          # exponential moving average decay
+        train_num_steps = args.train_steps,
+        gradient_accumulate_every = 2,
+        ema_decay = 0.995,
     )
 
     logging.info('built trainer')
