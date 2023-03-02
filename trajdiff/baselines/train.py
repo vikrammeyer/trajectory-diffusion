@@ -4,7 +4,7 @@ import logging
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
+from trajdiff.stlcg import Expression, Always, And, Or, Not, Eventually, Until
 from trajdiff.utils import write_obj
 
 
@@ -68,7 +68,7 @@ def train_baseline(model, train_loader, val_loader, epochs, learning_rate):
     return model, losses
 
 
-def train_baseline_stl(model, train_loader, val_loader, epochs, learning_rate, gamma=1):
+def train_baseline_stl(model, train_loader, val_loader, epochs, learning_rate, cfg, gamma=1):
     """
     Args:
         model (torch.nn.Module): The model to train.
@@ -88,7 +88,30 @@ def train_baseline_stl(model, train_loader, val_loader, epochs, learning_rate, g
     model = model.to(dev)
 
     mse = nn.MSELoss()
-    stl = lambda params, traj: 0
+
+    # s_exp = Expression("x", )
+    # params = Expression("p")
+    # obst_radi = Expression("r")
+
+    # # y is N dimensional tensor of all the y coordinates of the trajectory
+    # ys = torch.tensor([])
+    # y_exp = Expression("y", ys)
+
+    # xs = torch.tensor([])
+    # x_exp = Expression("x", xs)
+
+    # thetas = torch.tensor([])
+    # theta_exp = Expression("theta", thetas)
+
+    # vs = torch.tensor([])
+    # vel_exp = Expression("vel", vs)
+
+
+    # upper_lane = y_exp <= (cfg.lane_width / 2) * torch.ones(cfg.n_intervals)
+    # lower_lane = y_exp >= (-cfg.lane_width / 2) * torch.ones(cfg.n_intervals)
+    # in_lane = And(upper_lane, lower_lane)
+
+    # traj_in_lane = Always(in_lane)
 
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -106,14 +129,19 @@ def train_baseline_stl(model, train_loader, val_loader, epochs, learning_rate, g
             outputs = model(inputs)
 
             mse_loss = mse(outputs, targets)
-            stl_loss = stl(inputs, outputs)
-            loss = mse_loss + gamma * stl_loss
+
+            # flip input signal along the trajectory axis to get the reverse trajectory while
+            # preserving batch size
+            # robustness = traj_in_lane.robustness(outputs.flip((-1)))
+
+
+            loss = mse_loss # + gamma * torch.relu(-robustness)
 
             train_losses.append(
                 {
                     "total loss": loss.item(),
                     "mse loss": mse_loss.item(),
-                    "stl loss": stl_loss.item(),
+                    #"stl loss": stl_loss.item(),
                 }
             )
             loss.backward()
@@ -129,7 +157,7 @@ def train_baseline_stl(model, train_loader, val_loader, epochs, learning_rate, g
 
                 outputs = model(inputs)
                 val_loss += (
-                    mse(outputs, targets).item() + gamma * stl(inputs, outputs).item()
+                    mse(outputs, targets).item() #+ gamma * stl(inputs, outputs).item()
                 )
             val_losses.append(val_loss / len(val_loader))
 

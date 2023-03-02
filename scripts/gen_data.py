@@ -41,7 +41,8 @@ def main():
     parser.add_argument(
         "-s",
         "--seed",
-        default=42
+        default=42,
+        type=int
     )
     parser.add_argument(
         "-c",

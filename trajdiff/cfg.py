@@ -18,7 +18,6 @@ cfg = SimpleNamespace(
     max_vel=15.65,  # 35 mph
     max_ang_vel=1,  # 1 G = 1 m/s^2 is max force you want to feel in the car
     max_accel=1,
-    rng_seed=0,
     traj_length=160,
     controls_length=80,
     params_length=9,

@@ -11,12 +11,12 @@ import numpy as np
 import torch
 
 
-def set_seed(seed):
+def set_seed(seed: int):
     """
     Sets the random seed for numpy, torch, and CUDA (if available) to ensure reproducibility.
 
     Args:
-        seed (int): The random seed to be used.
+        seed (int): The random seed to be used. (np requires integer seed)
     """
     random.seed(seed)
     np.random.seed(seed)
