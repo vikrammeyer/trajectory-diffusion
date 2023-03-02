@@ -2,21 +2,21 @@ import argparse
 import logging
 from pathlib import Path
 from datetime import datetime
-from trajdiff.diffusion.trainer import Trainer1D
-from trajdiff.dataset.dataset import StateChannelsDataset, StateDataset
-from trajdiff.diffusion.classifier_free_guidance_1d import Unet1D, GaussianDiffusion1D
-from trajdiff.cfg import cfg
+
+from trajdiff.diffusion import Trainer1D, Unet1D, GaussianDiffusion1D
+from trajdiff.dataset import StateDataset
+from trajdiff import cfg
 from trajdiff.utils import setup_logging
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--dataset_folder', default='results/train/')
+    parser.add_argument('-o', '--output_folder', default='./results/trajdiff/')
     parser.add_argument('-n', '--train_steps', type=int, default=50000)
     parser.add_argument('-t', '--timesteps', type=int, default=1000)
     parser.add_argument('-st', '--sampling_timesteps', type=int, default=25)
     parser.add_argument('-l', '--loss_type', default='l2', help='l1, l2')
     parser.add_argument('-b', '--beta_schedule', default='cosine', help='linear, cosine')
-    parser.add_argument('-d', '--dataset_folder', default='./data/subset/')
-    parser.add_argument('-o', '--output_folder', default='./results/demo/')
     parser.add_argument('-ll', '--log_level', default='INFO', help='DEBUG, INFO, WARNING, ERROR')
     args = parser.parse_args()
 

@@ -1,3 +1,4 @@
+import logging
 import torch
 from ema_pytorch import EMA
 from torch.utils.data import DataLoader
@@ -127,7 +128,8 @@ class Trainer1D:
 
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 pbar.set_description(f"loss: {total_loss:.4f}")
-                self.run.log({"loss": total_loss})
+                if not self.debug_mode: self.run.log({"loss": total_loss})
+                logging.info('loss: %f', total_loss)
 
                 self.opt.step()
                 self.opt.zero_grad()
@@ -140,30 +142,30 @@ class Trainer1D:
                     self.ema.ema_model.eval()
                     milestone = self.step // self.save_and_sample_every
 
-                    with torch.no_grad():
-                        sampled_trajs = (
-                            self.ema.ema_model.sample(cond_vecs=test_params)
-                            .detach()
-                            .squeeze()
-                            .cpu()
-                            .numpy()
-                        )
+                    # with torch.no_grad():
+                    #     sampled_trajs = (
+                    #         self.ema.ema_model.sample(cond_vecs=test_params)
+                    #         .detach()
+                    #         .squeeze()
+                    #         .cpu()
+                    #         .numpy()
+                    #     )
 
-                        for i in range(sampled_trajs.shape[0]):
-                            traj, param = un_norm(sampled_trajs[i], test_params_np[i])
-                            self.viz.save_trajectory(
-                                traj,
-                                param,
-                                self.results_folder / f"{milestone}-{i}.png",
-                            )
+                    #     for i in range(sampled_trajs.shape[0]):
+                    #         traj, param = un_norm(sampled_trajs[i], test_params_np[i])
+                    #         self.viz.save_trajectory(
+                    #             traj,
+                    #             param,
+                    #             self.results_folder / f"{milestone}-{i}.png",
+                    #         )
 
                     self.save(milestone)
 
                 pbar.update(1)
 
-        for i in range(test_trajs.shape[0]):
-            traj, param = un_norm(test_trajs_np[i], test_params_np[i])
-            self.viz.save_trajectory(traj, param, self.results_folder / f"gt-{i}.png")
+        # for i in range(test_trajs.shape[0]):
+        #     traj, param = un_norm(test_trajs_np[i], test_params_np[i])
+        #     self.viz.save_trajectory(traj, param, self.results_folder / f"gt-{i}.png")
 
         self.save("finished")
 
