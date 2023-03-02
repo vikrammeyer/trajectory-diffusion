@@ -29,16 +29,12 @@ def main():
     seq_length = cfg.traj_length
     dataset = StateDataset(cfg, args.dataset_folder)
 
-    logging.info('loaded dataset')
-
     model = Unet1D(
         dim = 64,
         cond_dim = cfg.params_length,
         channels = channels,
         cond_drop_prob=0.05
     )
-
-    logging.info('built unet')
 
     diffusion = GaussianDiffusion1D(
         model,

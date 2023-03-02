@@ -1,4 +1,5 @@
 from functools import partial
+import logging
 
 import torch
 import torch.nn.functional as F
@@ -293,6 +294,8 @@ class Unet1D(nn.Module):
             dim * 2, dim, time_emb_dim=time_dim, cond_emb_dim=dim
         )
         self.final_conv = nn.Conv1d(dim, channels, 1)
+
+        logging.info('built unet')
 
     def forward_with_cond_scale(self, *args, cond_scale=1.0, **kwargs):
         logits = self.forward(*args, **kwargs)
