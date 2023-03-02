@@ -417,14 +417,19 @@ class Temporal_Operator(STL_Formula):
         This requires padding on the signal. Currently, the default is to extend the last value.
         TODO: have option on this padding
 
-        The initial hidden state is of the form (hidden_state, count). count is needed just for the case with self.interval=[0, np.inf) and distributed=True. Since we are scanning through the sigal and outputing the min/max values incrementally, the distributed min function doesn't apply. If there are multiple min values along the signal, the gradient will be distributed equally across them. Otherwise it will only apply to the value that occurs earliest as we scan through the signal (i.e., practically, the last value in the trace as we process the signal backwards).
+        The initial hidden state is of the form (hidden_state, count). count is needed just for the case with self.interval=[0, np.inf)
+        and distributed=True. Since we are scanning through the sigal and outputing the min/max values incrementally,
+        the distributed min function doesn't apply. If there are multiple min values along the signal, the gradient will be distributed
+        equally across them. Otherwise it will only apply to the value that occurs earliest as we scan through the signal
+        (i.e., practically, the last value in the trace as we process the signal backwards).
         """
         raise NotImplementedError("_initialize_rnn_cell is not implemented")
 
     def _rnn_cell(self, x, hc, scale=-1, agm=False, distributed=False, **kwargs):
         """
         x: rnn input [batch_size, 1, ...]
-        h0: input rnn hidden state. The hidden state is either a tensor, or a tuple of tensors, depending on the interval chosen. Generally, the hidden state is of size [batch_size, rnn_dim,...]
+        h0: input rnn hidden state. The hidden state is either a tensor, or a tuple of tensors, depending on the interval chosen.
+        Generally, the hidden state is of size [batch_size, rnn_dim,...]
         """
         raise NotImplementedError("_initialize_rnn_cell is not implemented")
 
@@ -487,6 +492,11 @@ class Always(Temporal_Operator):
         if x.is_cuda:
             self.M = self.M.cuda()
             self.b = self.b.cuda()
+        # x = tensor([-1.4800]) with shape [1]
+        # needs to have 3 elements in the shape to work
+        # rnn dim is 1
+        # print(x)
+        # print(x.shape)
         h0 = (
             torch.ones([x.shape[0], self.rnn_dim, x.shape[2]], device=x.device)
             * x[:, :1, :]
