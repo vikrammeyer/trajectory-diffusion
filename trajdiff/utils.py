@@ -4,6 +4,7 @@ import os
 import pathlib
 import pickle
 import random
+import subprocess
 import sys
 from typing import Optional
 
@@ -60,6 +61,9 @@ def setup_logging(
 
     logging.basicConfig(format=fmt, level=levels[level.upper()], handlers=handlers)
 
+    hash = git_hash()
+    logging.info("git hash: %s", hash)
+
 
 def write_obj(obj, filename):
     """
@@ -98,3 +102,7 @@ def write_metadata(cfg, dataset_folder: pathlib.Path):
     meta_file = dataset_folder / "metadata.json"
     metadata = json.dumps(cfg.__dict__)
     meta_file.write_text(metadata)
+
+
+def git_hash() -> str:
+    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()

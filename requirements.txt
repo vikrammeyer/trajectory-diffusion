@@ -1,9 +1,6 @@
 matplotlib==3.3.4
 numpy==1.22.0
 torch
-tqdm
-accelerate
 casadi
-ema-pytorch
 einops
-wandb
+tqdm
