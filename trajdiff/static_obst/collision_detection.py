@@ -71,7 +71,7 @@ def in_collision(obstacle, car_state, cfg):
 
 
 if __name__ == "__main__":
-    from trajdiff.cfg import cfg
+    from trajdiff.static_obst import cfg
 
     # assert in_collision([0,0,1], [0,0,0,0], cfg)
 

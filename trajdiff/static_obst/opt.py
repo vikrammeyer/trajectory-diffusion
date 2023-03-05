@@ -140,9 +140,9 @@ if __name__ == "__main__":
     import math
     from types import SimpleNamespace
 
-    from trajdiff.cfg import cfg
-    from trajdiff.dataset.obstacles import generate_obstacles
-    from trajdiff.viz import Visualizations
+    from trajdiff.static_obst.cfg import cfg
+    from trajdiff.static_obst.obstacles import generate_obstacles
+    from trajdiff.static_obst.viz import Visualizations
 
     # Can test different configurations here
     # in meters and seconds

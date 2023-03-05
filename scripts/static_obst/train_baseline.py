@@ -5,8 +5,7 @@ from pathlib import Path
 
 from trajdiff.utils import set_seed, setup_logging
 from trajdiff.baselines import FCNet, train_baseline, save_results
-from trajdiff.dataset import StateDataset
-from trajdiff import cfg
+from trajdiff.static_obst import StateDataset, cfg
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--save_folder', required=True)

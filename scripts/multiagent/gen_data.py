@@ -2,9 +2,8 @@ import argparse
 import random
 from concurrent.futures import ProcessPoolExecutor
 import logging
-from trajdiff.utils import setup, set_seed, write_metadata, write_obj
-from trajdiff.dataset.generator import gen_samples
-from trajdiff import cfg
+from trajdiff.utils import setup, set_seed, write_obj
+from trajdiff.multiagent import generate_multiple_trajs, cfg
 
 
 def main():
@@ -17,6 +16,19 @@ def main():
         help="Number of datapoints to generate",
     )
     parser.add_argument(
+        "-o",
+        "--output_folder",
+        required=True,
+        help="Output folder for files from each process",
+    )
+    parser.add_argument(
+        "-a",
+        "--n_agents",
+        type=int,
+        default=15,
+    )
+    parser.add_argument("-t", "--traj_len", type=int, default=100)
+    parser.add_argument(
         "-p",
         "--processes",
         type=int,
@@ -25,24 +37,15 @@ def main():
     )
     parser.add_argument("-f", "--n_per_file", type=int, default=1000)
     parser.add_argument(
-        "-o",
-        "--output_folder",
-        required=True,
-        help="Output folder for .npy files from each process",
-    )
-    parser.add_argument(
         "-l",
         "--log_level",
         default="INFO",
         help="DEBUG, INFO, WARNING, ERROR",
     )
     parser.add_argument("-s", "--seed", default=42, type=int)
-    parser.add_argument("-c", "--constrain_obsts", default=False, action="store_true")
     args = parser.parse_args()
 
-    output_folder = setup(args)
-
-    write_metadata(cfg, output_folder)
+    output_folder = setup(args, log_file="gen-multiagent-data.log")
 
     timeout = 25 * args.n_per_file
     n_jobs = int(args.n_samples / args.n_per_file)
@@ -55,16 +58,20 @@ def main():
 
         futures = [
             executor.submit(
-                gen_samples, cfg, args.n_per_file, seed, args.constrain_obsts
+                generate_multiple_trajs,
+                seed,
+                args.n_per_file,
+                args.n_agents,
+                args.traj_len,
+                cfg,
             )
             for seed in seeds
         ]
 
         for i, future in enumerate(futures, 1):
             try:
-                results = future.result(timeout=timeout)
-
-                write_obj(results, args.output_folder / f"chunk{i}.pkl")
+                data = future.result(timeout=timeout)
+                write_obj(data, output_folder / f"chunk{i}.pkl")
                 logging.info("Generated chunk %d", i)
 
             except Exception as e:

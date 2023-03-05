@@ -1,11 +1,8 @@
-from trajdiff.dataset.dataset import StateDataset
+from trajdiff.static_obst import StateDataset, cfg
 from trajdiff.diffusion.classifier_free_guidance_1d import Unet1D, GaussianDiffusion1D
 from trajdiff.diffusion.trainer import Trainer1D
-from trajdiff.utils import setup_logging, write_obj
-from trajdiff.cfg import cfg
+from trajdiff.utils import setup, write_obj
 import logging
-from datetime import datetime
-from pathlib import Path
 import argparse
 
 def main():
@@ -20,15 +17,10 @@ def main():
     parser.add_argument('-ll', '--log_level', default='INFO', help='DEBUG, INFO, WARNING, ERROR')
     args = parser.parse_args()
 
-    output_folder = Path(args.output_folder)
-    output_folder.mkdir(exist_ok = True)
-    now = datetime.now().strftime("%b-%d-%H-%M-%S")
-    setup_logging(args.log_level, True, output_folder/f"sample-diff-{now}.log")
+    output_folder = setup(args, "sample-diffusion.log")
 
     channels=1
     dataset = StateDataset(cfg, args.dataset_folder)
-
-    logging.info('loaded dataset')
 
     model = Unet1D(
         dim = 64,
@@ -36,8 +28,6 @@ def main():
         channels = channels,
         cond_drop_prob=0.05
     )
-
-    logging.info('built unet')
 
     diffusion = GaussianDiffusion1D(
         model,

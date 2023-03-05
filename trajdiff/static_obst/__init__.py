@@ -1,3 +1,7 @@
+from trajdiff.static_obst.dataset import StateDataset
+from trajdiff.static_obst.obstacles import generate_obstacles
+from trajdiff.static_obst.viz import Visualizations
+
 import math
 from types import SimpleNamespace
 

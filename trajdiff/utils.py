@@ -12,24 +12,24 @@ import numpy as np
 import torch
 
 
-def setup(args, log_file) -> pathlib.Path:
+def setup(args, log_file, print_stdout=True) -> pathlib.Path:
     """
     Create output folder, setup logging, log the git hash, log the script args
 
     Args:
-        args (SimpleNamespace): An object containing the command-line arguments passed to the script.
-                                Must contain `output_folder` (relative to ./results/) and `log_level`.
+        args (Namespace): An object containing the command-line arguments passed to the script.
+                                Must contain `output_folder` and `log_level`.
 
     Returns:
         A `Path` object representing the output folder.
     """
-    output_folder = pathlib.Path(f"results/{args.output_folder}")
+    output_folder = pathlib.Path(args.output_folder)
     output_folder_exists = output_folder.is_dir()
 
     if not output_folder_exists:
-        os.mkdir(output_folder)
+       output_folder.mkdir()
 
-    setup_logging(args.log_level, print_stdout=True, filename=output_folder / log_file)
+    setup_logging(args.log_level, print_stdout=print_stdout, filename=output_folder / log_file)
 
     # Log the git commit for reproducability
     hash = git_hash()

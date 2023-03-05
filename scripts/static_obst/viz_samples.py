@@ -1,10 +1,8 @@
 import argparse
 from pathlib import Path
 
-from trajdiff.cfg import cfg
-from trajdiff.dataset.dataset import StateDataset
+from trajdiff.static_obst import StateDataset, cfg, Visualizations
 from trajdiff.utils import read_file
-from trajdiff.viz import Visualizations
 
 
 def main():

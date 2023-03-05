@@ -3,8 +3,8 @@ import random
 
 from casadi import *
 
-from trajdiff.dataset.obstacles import generate_obstacles, generate_obstacles_w_constraints
-from trajdiff.dataset.opt import setup_problem
+from trajdiff.static_obst.obstacles import generate_obstacles, generate_obstacles_w_constraints
+from trajdiff.static_obst.opt import setup_problem
 
 
 def gen_samples(cfg, n, seed, constrain_obsts):
@@ -66,7 +66,7 @@ def gen_and_solve_problem(cfg, problem, constrain_obsts=False):
 
 
 if __name__ == "__main__":
-    from trajdiff.cfg import cfg
+    from trajdiff.static_obst.cfg import cfg
 
     data = gen_samples(cfg, 5, 42)
     print(data)
