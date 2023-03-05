@@ -11,7 +11,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
 MAX_RADIUS = 20
-MAX_SPEED = 2 # slow enough to prevent collision penetration
+MAX_SPEED = 2 # slow enough to prevent collision penetration most of the time
               # 5 is too fast and sometimes penetration collisions occur
 
 class Sprite:
@@ -124,12 +124,33 @@ def gif(trajectories, sprites, filename='bouncing_sprites.gif'):
     fig = plt.figure()
     plt.axis('equal')
 
-    print(len(trajectories[0]))
-    print(total_frames)
-
     ani = animation.FuncAnimation(fig, plot_sprites, frames=total_frames, interval=1000/frame_rate, blit=False)
 
     ani.save(filename, writer='pillow')
+
+
+def in_collision(x1, y1, x2, y2, r1, r2):
+    return (x1 - x2)**2 + (y1 - y2)**2 < (r1 + r2)**2
+
+
+def calc_collisions(trajectories, radii):
+    n_collisions = 0
+
+    traj_steps = len(trajectories[0])
+    n_agents = len(radii)
+    for step in range(traj_steps):
+        for agent in range(n_agents):
+            x1,y1 = trajectories[agent][step]
+            r1 = radii[agent]
+            for agent2 in range(agent+1, n_agents):
+                x2, y2 = trajectories[agent2][step]
+                r2 = radii[agent2]
+
+                if in_collision(x1, y1, x2, y2, r1, r2):
+                    n_collisions += 1
+
+    return n_collisions
+
 
 if __name__ == '__main__':
     import argparse
@@ -139,4 +160,8 @@ if __name__ == '__main__':
     args  = parser.parse_args()
 
     traj, sprites = generate_trajectory(args.n_agents, args.traj_len)
+
+    radii = [sprite.radius for sprite in sprites]
+    print('# collisions:', calc_collisions(traj, radii))
+
     gif(traj, sprites)
