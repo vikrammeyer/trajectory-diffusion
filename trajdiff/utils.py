@@ -12,6 +12,41 @@ import numpy as np
 import torch
 
 
+def setup(args, log_file) -> pathlib.Path:
+    """
+    Create output folder, setup logging, log the git hash, log the script args
+
+    Args:
+        args (SimpleNamespace): An object containing the command-line arguments passed to the script.
+                                Must contain `output_folder` (relative to ./results/) and `log_level`.
+
+    Returns:
+        A `Path` object representing the output folder.
+    """
+    output_folder = pathlib.Path(f"results/{args.output_folder}")
+    output_folder_exists = output_folder.is_dir()
+
+    if not output_folder_exists:
+        os.mkdir(output_folder)
+
+    setup_logging(args.log_level, print_stdout=True, filename=output_folder / log_file)
+
+    # Log the git commit for reproducability
+    hash = git_hash()
+    logging.info("git hash: %s", hash)
+
+    # Log the arguments used to run the script for reproducability
+    logging.info(args)
+
+    # To help determine when output files get mixed together from different runs
+    if output_folder_exists:
+        logging.warning(
+            "output folder %s already exists...saving new outputs to it", output_folder
+        )
+
+    return output_folder
+
+
 def set_seed(seed: int):
     """
     Sets the random seed for numpy, torch, and CUDA (if available) to ensure reproducibility.
@@ -41,8 +76,6 @@ def setup_logging(
         print_stdout (bool): Whether to print log messages to stdout.
         filename (Optional[pathlib.Path]): The file to write log messages to (if specified).
     """
-    fmt = "%(asctime)s | %(levelname)8s | %(message)s"
-
     handlers = []
 
     if print_stdout:
@@ -59,10 +92,13 @@ def setup_logging(
         "CRITICAL": logging.CRITICAL,
     }
 
-    logging.basicConfig(format=fmt, level=levels[level.upper()], handlers=handlers)
-
-    hash = git_hash()
-    logging.info("git hash: %s", hash)
+    fmt = "%(asctime)s|%(levelname)s| %(message)s"
+    logging.basicConfig(
+        format=fmt,
+        datefmt="%m-%d %H:%M:%S",
+        level=levels[level.upper()],
+        handlers=handlers,
+    )
 
 
 def write_obj(obj, filename):
@@ -91,6 +127,17 @@ def read_file(filename):
         return pickle.load(f)
 
 
+def write_dict(dct, filename: pathlib.Path):
+    """
+    Write a dictionary to json file pretty printed.
+
+    Args:
+        dct (dict): A dictionary to be written to the file.
+        filename (pathlib.Path): A path representing the file to write to.
+    """
+    filename.write_text(json.dumps(dct, indent=4))
+
+
 def write_metadata(cfg, dataset_folder: pathlib.Path):
     """
     Writes the configuration dictionary to a metadata file in JSON format.
@@ -99,10 +146,14 @@ def write_metadata(cfg, dataset_folder: pathlib.Path):
         cfg (dict): The configuration dictionary to be written.
         dataset_folder (pathlib.Path): The folder where the metadata file should be written.
     """
-    meta_file = dataset_folder / "metadata.json"
-    metadata = json.dumps(cfg.__dict__)
-    meta_file.write_text(metadata)
+    write_dict(cfg.__dict__, dataset_folder / "metadata.json")
 
 
 def git_hash() -> str:
-    return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    """
+    Get the git hash. Assumes being run in a git repo (otherwise error).
+
+    Returns:
+        A str representing current git hash.
+    """
+    return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
