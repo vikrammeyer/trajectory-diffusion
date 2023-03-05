@@ -2,10 +2,11 @@ import argparse
 import logging
 from pathlib import Path
 
-from trajdiff.diffusion import Trainer1D, Unet1D, GaussianDiffusion1D
+from trajdiff.diffusion import Unet1D, GaussianDiffusion1D, train
 from trajdiff.dataset import StateDataset
 from trajdiff import cfg
 from trajdiff.utils import setup_logging
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -43,24 +44,14 @@ def main():
         beta_schedule = args.beta_schedule
     )
 
-    logging.info('built gaussian diffusion')
-
-    trainer = Trainer1D(
+    train(
         diffusion,
         dataset,
-        results_folder = output_folder,
+        output_folder,
         train_batch_size = 32,
         train_lr = 8e-5,
         train_num_steps = args.train_steps,
-        gradient_accumulate_every = 2,
-        ema_decay = 0.995,
     )
-
-    logging.info('built trainer')
-
-    trainer.train()
-
-    logging.info("finished training")
 
 if __name__ == '__main__':
     main()

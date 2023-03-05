@@ -84,7 +84,7 @@ class Trainer1D:
             total_loss = 0.0
 
             for _ in range(self.gradient_accumulate_every):
-                trajs, params = next(self.dl)
+                params, trajs = next(self.dl)
                 trajs, params = trajs.to(self.dev), params.to(self.dev)
 
                 loss = self.model(trajs, cond_vecs=params)
@@ -114,7 +114,7 @@ class Trainer1D:
     def sample(self, test_dataset):
         self.ema.ema_model.eval()
         test_dl = DataLoader(test_dataset, batch_size=self.batch_size, pin_memory=True)
-        for gt_trajs, params in test_dl:
+        for params, gt_trajs in test_dl:
             yield (
                 gt_trajs,
                 params,
