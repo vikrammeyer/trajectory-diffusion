@@ -34,15 +34,15 @@ def train(
         history, future = history.to(dev), future.to(dev)
 
         # randomly select an agent in each situation to generate a trajectory prediction for
-        select_agents = torch.randint(low=0, high=n_agents, size=(batch_size,))
+        batch = history.shape[0] # don't use batch_size cause we last batch not necessarily that size
+        select_agents = torch.randint(low=0, high=n_agents, size=(batch,))
 
         # [B, traj_length, statedim (channels)]
-        future_traj = future[torch.arange(batch_size), select_agents, :, :]
+        future_traj = future[torch.arange(batch), select_agents, :, :]
         # model expects trajectories of shape: [B, channels, seq_length]
         future_traj = rearrange(future_traj, "batch seq_len channels -> batch channels seq_len")
-
         # [B, statedim (channels- assumed to be 2 in the Unet1D agent of interest encoder)]
-        init_states = history[torch.arange(batch_size), select_agents, -1, :]
+        init_states = history[torch.arange(batch), select_agents, -1, :]
 
         # set transformer encoder expects cond_vec of shape [B, n_agents, seq_length, channel]
         # (channels will be flattened in the set transformer encoder)

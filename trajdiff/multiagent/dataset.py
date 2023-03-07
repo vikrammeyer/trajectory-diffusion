@@ -4,6 +4,7 @@ import glob
 from torchvision.transforms import Compose, Lambda
 from typing import Tuple
 import numpy as np
+import logging
 
 def np_to_tensor(ndarray: np.ndarray) -> torch.Tensor:
     return torch.from_numpy(ndarray)
@@ -44,6 +45,8 @@ class MultiAgentDataset(torch.utils.data.Dataset):
             Lambda(self.normalize_0_to_1),
             Lambda(self.split_history_and_future)
         ])
+
+        logging.info('multiagent dataset loaded')
 
     def normalize_0_to_1(self, trajectories):
         return (trajectories - self.mintraj) / (self.maxtraj - self.mintraj)

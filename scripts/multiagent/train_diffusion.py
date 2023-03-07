@@ -20,9 +20,10 @@ def main():
     parser.add_argument('-l', '--loss_type', default='l2', help='l1, l2')
     parser.add_argument('-b', '--beta_schedule', default='cosine', help='linear, cosine')
     parser.add_argument('-ll', '--log_level', default='INFO', help='DEBUG, INFO, WARNING, ERROR')
+    parser.add_argument('-pstd', '--print_stdout', default=True, action='store_false')
     args = parser.parse_args()
 
-    output_folder = setup(args, "train-diffusion.log")
+    output_folder = setup(args, "train-diffusion.log", print_stdout=args.print_stdout)
 
     dataset = MultiAgentDataset(args.dataset_folder, cfg, args.percent_history)
     channels = 2
