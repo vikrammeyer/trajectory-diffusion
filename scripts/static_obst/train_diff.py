@@ -3,7 +3,7 @@ import logging
 from pathlib import Path
 
 from trajdiff.diffusion import Trainer1D, Unet1D, GaussianDiffusion1D
-from trajdiff.dataset import StateDataset
+from trajdiff.static_obst import StateDataset
 from trajdiff import cfg
 from trajdiff.utils import setup_logging
 

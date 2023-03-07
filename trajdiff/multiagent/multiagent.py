@@ -1,6 +1,3 @@
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
 import random
 import math
 
@@ -96,27 +93,7 @@ def generate_trajectory(n_agents, traj_len, cfg):
 
     return trajectories, sprites
 
-def gif(trajectories, sprites, cfg, filename='bouncing_sprites.gif'):
-    n = len(sprites)
-    total_frames = len(trajectories[0])
-    frame_rate = 10
 
-    def plot_sprites(frame):
-        plt.clf() # clear the previous frame
-
-        plt.xlim([cfg.xmin, cfg.xmax])
-        plt.ylim([cfg.ymin, cfg.ymax])
-
-        for i in range(n):
-            x, y = trajectories[i][frame]
-            plt.gca().add_artist(plt.Circle((x, y), sprites[i].radius, color='blue'))
-
-    fig = plt.figure()
-    plt.axis('equal')
-
-    ani = animation.FuncAnimation(fig, plot_sprites, frames=total_frames, interval=1000/frame_rate, blit=False)
-
-    ani.save(filename, writer='pillow')
 
 
 def in_collision(x1, y1, x2, y2, r1, r2):
@@ -153,5 +130,3 @@ if __name__ == '__main__':
 
     radii = [sprite.radius for sprite in sprites]
     print('# collisions:', calc_collisions(traj, radii))
-
-    gif(traj, sprites)

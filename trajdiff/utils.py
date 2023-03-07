@@ -157,3 +157,17 @@ def git_hash() -> str:
         A str representing current git hash.
     """
     return subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()
+
+
+def exists(x):
+    return x is not None
+
+
+def default(val, d):
+    if exists(val):
+        return val
+    return d() if callable(d) else d
+
+
+def get_device():
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")

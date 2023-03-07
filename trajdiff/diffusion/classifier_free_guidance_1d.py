@@ -383,9 +383,6 @@ class Unet1D(nn.Module):
         return self.final_conv(x)
 
 
-# gaussian diffusion trainer class
-
-
 class GaussianDiffusion1D(nn.Module):
     def __init__(
         self,
@@ -404,7 +401,7 @@ class GaussianDiffusion1D(nn.Module):
         self.model = model
         self.channels = self.model.channels
 
-        self.seq_length = seq_length # TODO: modify to add ability to create dynamically length traj
+        self.seq_length = seq_length
 
         self.objective = objective
 
@@ -544,45 +541,47 @@ class GaussianDiffusion1D(nn.Module):
         return model_mean, posterior_variance, posterior_log_variance, x_start
 
     @torch.no_grad()
-    def p_sample(self, x, init_state, t: int, cond_vecs, cond_scale=3.0, clip_denoised=True):
-        """ reverse diffusion process parameterized by the UNet
-            TODO: any guidance occurs here (pass in differentiable objective as param)
-            separate function since the guidance will involve multiple agent predictions at once
+    def sample(self, cond_vec, cond_scale=3.0, custom_seq_len=None):
+        """ Sample all agent motion predictions conditioned on the trajectory history
+            All agents future trajectories are sampled together in a batch
+
+            Args:
+                cond_vec (tensor): [N_agents, Traj steps, state_dim]
         """
-        b, *_, device = *x.shape, x.device
-        batched_times = torch.full((x.shape[0],), t, device=x.device, dtype=torch.long)
-        model_mean, _, model_log_variance, x_start = self.p_mean_variance(
-            x=x,
-            init_state=init_state,
-            t=batched_times,
-            cond_vecs=cond_vecs,
-            cond_scale=cond_scale,
-            clip_denoised=clip_denoised,
-        )
-        noise = torch.randn_like(x) if t > 0 else 0.0  # no noise if t == 0
-        pred_img = model_mean + (0.5 * model_log_variance).exp() * noise # TODO: add STL guidance term here
-        # pred_traj = model_mean + (0.5 * model_log_variance).exp() * noise + stl_formula(model_mean).grad
-        return pred_img, x_start
+        n_agents = cond_vec.shape[0]
+        batch_size = n_agents
+        # default to seq length the model was trained with but can pass in different lengths
+        seq_length = default(custom_seq_len, self.seq_length)
 
-    @torch.no_grad()
-    def sample(self, init_states, cond_vecs, cond_scale=3.0):
-        batch = cond_vecs.shape[0]
-        # TODO: could make seqlen arg to sample() since it doesn't depend on training
-        seq_length = self.seq_length
-        channels = self.channels
-
-        shape = (batch, channels, seq_length)
+        shape = (batch_size, self.channels, seq_length)
         device = self.betas.device
         traj = torch.randn(shape, device=device)
 
-        x_start = None
+        init_states = cond_vec[0, :, -1, :]
+        logging.info('init states %s', init_states)
+
+        # TODO: figure out how to only pass 1 instance of the history through
+        # the set encoder and reuse for all samples in the batch
+        # allows reuse for all agents AND all timesteps (big speed efficiency increase)
+        batched_cond_vecs = repeat(cond_vec, 'n_agents traj_steps state_dim -> n_agents n_agents traj_steps state_dim')
 
         for t in tqdm(
             reversed(range(0, self.num_timesteps)),
             desc="sampling loop time step",
             total=self.num_timesteps,
         ):
-            traj, x_start = self.p_sample(traj, init_states, t, cond_vecs, cond_scale)
+            batched_times = torch.full((batch_size,), t, device=device, dtype=torch.long)
+            model_mean, _, model_log_variance, _ = self.p_mean_variance(
+                x=traj,
+                init_state=init_states,
+                t=batched_times,
+                cond_vecs=batched_cond_vecs,
+                cond_scale=cond_scale,
+            )
+            noise = torch.randn_like(traj) if t > 0 else 0.0  # no noise if t == 0
+            traj = model_mean + (0.5 * model_log_variance).exp() * noise
+            # TODO: add STL guidance term here
+            # traj = model_mean + (0.5 * model_log_variance).exp() * noise + stl_formula(model_mean).grad
 
         traj = unnormalize_to_zero_to_one(traj)
         return traj

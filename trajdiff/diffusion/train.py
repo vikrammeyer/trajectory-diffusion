@@ -65,25 +65,6 @@ def train(
     logging.info('finished training.')
 
 
-@torch.inference_mode()
-def sample(diffusion_model, test_dataset):
-    # TODO: modify for the multiagent setting
-    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    dataloader = torch.utils.data.DataLoader(
-        test_dataset, batch_size=None, pin_memory=True
-    )
-
-    for normalized_params, normalized_gt_trajs in dataloader:
-        normalized_sample = diffusion_model.sample(cond_vecs=params.to(dev)).cpu()
-
-        sampled_traj, _ = test_dataset.unnormalize(normalized_sample, normalized_params)
-        gt_traj, params = test_dataset.unnormalize(normalized_gt_trajs, normalized_params)
-
-        yield (params, gt_traj, sampled_traj)
-
-    logging.info('finished sampling from model')
-
 def save(model, optimizer, results_folder, step: int, milestone: str):
     data = {
         "step": step,
@@ -95,12 +76,3 @@ def save(model, optimizer, results_folder, step: int, milestone: str):
     torch.save(data, milestone_path)
 
     logging.info("milestone %s model saved", str(milestone))
-
-def load(self, checkpoint_path, dev):
-    data = torch.load(checkpoint_path, map_location=dev)
-
-    self.model.load_state_dict(data["model"])
-    self.step = data["step"]
-    self.opt.load_state_dict(data["opt"])
-
-    logging.info('loaded model and optimizer from %s', checkpoint_path)
