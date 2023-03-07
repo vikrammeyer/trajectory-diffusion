@@ -1,6 +1,6 @@
 import torch
 import logging
-
+from einops import rearrange
 from trajdiff.diffusion.diffusion_utils import *
 
 def train(
@@ -8,32 +8,48 @@ def train(
     dataset,
     results_folder,
     *,
-    train_batch_size=16,
-    train_lr=1e-4,
-    train_num_steps=100000,
+    batch_size=16,
+    lr=1e-4,
+    num_train_steps=100000,
     adam_betas=(0.9, 0.99),
     save_and_sample_every=1000):
 
-    step = 0
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logging.info("using %s", dev)
     model = diffusion_model.to(dev)
 
     dataloader = torch.utils.data.DataLoader(
-        dataset, batch_size=train_batch_size, shuffle=True, pin_memory=True
+        dataset, batch_size=batch_size, shuffle=True, pin_memory=True
     )
 
     dataloader = cycle(dataloader)
 
-    opt = torch.optim.Adam(model.parameters(), lr=train_lr, betas=adam_betas)
+    opt = torch.optim.Adam(model.parameters(), lr=lr, betas=adam_betas)
 
-    while step < train_num_steps:
-        params, trajs = next(dataloader)
-        trajs, params = trajs.to(dev), params.to(dev)
+    n_agents = dataset.n_agents
 
-        loss = model(trajs, cond_vecs=params)
+    step = 0
+    while step < num_train_steps:
+        history, future = next(dataloader)
+        history, future = history.to(dev), future.to(dev)
+
+        # randomly select an agent in each situation to generate a trajectory prediction for
+        select_agents = torch.randint(low=0, high=n_agents, size=(batch_size,))
+
+        # [B, traj_length, statedim (channels)]
+        future_traj = future[torch.arange(batch_size), select_agents, :, :]
+        # model expects trajectories of shape: [B, channels, seq_length]
+        future_traj = rearrange(future_traj, "batch seq_len channels -> batch channels seq_len")
+
+        # [B, statedim (channels- assumed to be 2 in the Unet1D agent of interest encoder)]
+        init_states = history[torch.arange(batch_size), select_agents, -1, :]
+
+        # set transformer encoder expects cond_vec of shape [B, n_agents, seq_length, channel]
+        # (channels will be flattened in the set transformer encoder)
+        loss = model(future_traj, init_states=init_states, cond_vecs=history)
+
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-
         opt.step()
         opt.zero_grad()
 
@@ -51,6 +67,7 @@ def train(
 
 @torch.inference_mode()
 def sample(diffusion_model, test_dataset):
+    # TODO: modify for the multiagent setting
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     dataloader = torch.utils.data.DataLoader(

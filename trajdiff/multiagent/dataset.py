@@ -61,6 +61,8 @@ class MultiAgentDataset(torch.utils.data.Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
+        """ returns tuple of (history trajectory, future trajectory)
+        """
         sample = self.data[idx]
 
         trajectories = sample['trajectories'] # list
@@ -68,6 +70,8 @@ class MultiAgentDataset(torch.utils.data.Dataset):
         return self.transforms(trajectories)
 
 if __name__ == '__main__':
-    ds = MultiAgentDataset('data/multiagent/test')
+    from trajdiff.multiagent import cfg
+    ds = MultiAgentDataset('data/multiagent/test', cfg)
     dl = iter(ds)
-    print(next(dl))
+    first, sec = next(dl)
+    print(first.shape, sec.shape)

@@ -119,10 +119,13 @@ class ResnetBlock(nn.Module):
         self.res_conv = nn.Conv1d(dim, dim_out, 1) if dim != dim_out else nn.Identity()
 
     def forward(self, x, time_emb=None, cond_emb=None):
-
         scale_shift = None
         if exists(self.mlp) and (exists(time_emb) or exists(cond_emb)):
+
             full_cond_emb = tuple(filter(exists, (time_emb, cond_emb)))
+
+            # time_emb is [B, time_dim] (dim * 4 = time_dim)
+            # cond_emb is [32, 32, 64]
             full_cond_emb = torch.cat(full_cond_emb, dim=-1)
 
             full_cond_emb = self.mlp(full_cond_emb)
@@ -196,6 +199,7 @@ class Unet1D(nn.Module):
         self,
         dim,
         cond_dim,
+        cond_encoder,
         channels=1,
         cond_drop_prob=0.5,
         dim_mults=(1, 2, 4),
@@ -225,7 +229,15 @@ class Unet1D(nn.Module):
             nn.Linear(time_dim, time_dim),
         )
 
+        self.agent_of_interest_encoder = nn.Sequential(
+            nn.Linear(2, dim),
+            nn.Linear(dim, cond_dim),
+            nn.GELU(),
+            nn.Linear(cond_dim, cond_dim),
+        )
+
         # conditioning vector embeddings
+        self.cond_encoder = cond_encoder # should output [B, cond_dim]
         self.cond_mlp = nn.Linear(cond_dim, dim)
         self.null_cond_emb = nn.Parameter(torch.randn(cond_dim))
 
@@ -306,14 +318,17 @@ class Unet1D(nn.Module):
         null_logits = self.forward(*args, cond_drop_prob=1.0, **kwargs)
         return null_logits + (logits - null_logits) * cond_scale
 
-    def forward(self, x, time, cond_vecs, cond_drop_prob=None):
+    def forward(self, x, init_state, time, cond_vecs, cond_drop_prob=None):
         batch, device = x.shape[0], x.device
 
         cond_drop_prob = default(cond_drop_prob, self.cond_drop_prob)
 
         # condition dropout for classifier free guidance
 
-        conds_emb = cond_vecs
+        aoi = self.agent_of_interest_encoder(init_state)
+        traj_hist = self.cond_encoder(cond_vecs).squeeze()
+
+        conds_emb = aoi + traj_hist
 
         if cond_drop_prob > 0:
             keep_mask = prob_mask_like((batch,), 1 - cond_drop_prob, device=device)
@@ -322,6 +337,7 @@ class Unet1D(nn.Module):
             mask = rearrange(keep_mask, "b -> b 1")
 
             conds_emb = torch.where(mask, conds_emb, null_conds_emb)
+
 
         c = self.cond_mlp(conds_emb)
 
@@ -333,6 +349,7 @@ class Unet1D(nn.Module):
 
         h = []
         for block1, block2, attn, downsample in self.downs:
+            # block1 and block2 don't change the size of x
             x = block1(x, t, c)
             h.append(x)
 
@@ -340,6 +357,9 @@ class Unet1D(nn.Module):
             x = attn(x)
             h.append(x)
 
+            # cuts dim=-1 in half
+            # (important numbers are evenly divisble for adding residuals with
+            # upsampled vectors)
             x = downsample(x)
 
         x = self.mid_block1(x, t, c)
@@ -354,6 +374,7 @@ class Unet1D(nn.Module):
             x = block2(x, t, c)
             x = attn(x)
 
+            # doubles dim=-1
             x = upsample(x)
 
         x = torch.cat((x, r), dim=1)
@@ -378,13 +399,12 @@ class GaussianDiffusion1D(nn.Module):
         beta_schedule="cosine",
         p2_loss_weight_gamma=0.0,
         p2_loss_weight_k=1,
-        ddim_sampling_eta=1.0,
     ):
         super().__init__()
         self.model = model
         self.channels = self.model.channels
 
-        self.seq_length = seq_length
+        self.seq_length = seq_length # TODO: modify to add ability to create dynamically length traj
 
         self.objective = objective
 
@@ -410,13 +430,9 @@ class GaussianDiffusion1D(nn.Module):
 
         # sampling related parameters
 
-        self.sampling_timesteps = default(
-            sampling_timesteps, timesteps
-        )  # default num sampling timesteps to number of timesteps at training
-
+        # default num sampling timesteps to number of timesteps at training
+        self.sampling_timesteps = default(sampling_timesteps, timesteps)
         assert self.sampling_timesteps <= timesteps
-        self.is_ddim_sampling = self.sampling_timesteps < timesteps
-        self.ddim_sampling_eta = ddim_sampling_eta
 
         # helper function to register buffer from float64 to float32
 
@@ -495,9 +511,9 @@ class GaussianDiffusion1D(nn.Module):
         )
         return posterior_mean, posterior_variance, posterior_log_variance_clipped
 
-    def model_predictions(self, x, t, cond_vecs, cond_scale=3, clip_x_start=False):
+    def model_predictions(self, x, init_state, t, cond_vecs, cond_scale=3, clip_x_start=False):
         model_output = self.model.forward_with_cond_scale(
-            x, t, cond_vecs, cond_scale=cond_scale
+            x, init_state, t, cond_vecs, cond_scale=cond_scale
         )
         maybe_clip = (
             partial(torch.clamp, min=-1.0, max=1.0) if clip_x_start else identity
@@ -515,8 +531,8 @@ class GaussianDiffusion1D(nn.Module):
 
         return ModelPrediction(pred_noise, x_start)
 
-    def p_mean_variance(self, x, t, cond_vecs, cond_scale, clip_denoised=True):
-        preds = self.model_predictions(x, t, cond_vecs, cond_scale)
+    def p_mean_variance(self, x, init_state, t, cond_vecs, cond_scale, clip_denoised=True):
+        preds = self.model_predictions(x, init_state, t, cond_vecs, cond_scale)
         x_start = preds.pred_x_start
 
         if clip_denoised:
@@ -528,25 +544,36 @@ class GaussianDiffusion1D(nn.Module):
         return model_mean, posterior_variance, posterior_log_variance, x_start
 
     @torch.no_grad()
-    def p_sample(self, x, t: int, cond_vecs, cond_scale=3.0, clip_denoised=True):
+    def p_sample(self, x, init_state, t: int, cond_vecs, cond_scale=3.0, clip_denoised=True):
+        """ reverse diffusion process parameterized by the UNet
+            TODO: any guidance occurs here (pass in differentiable objective as param)
+            separate function since the guidance will involve multiple agent predictions at once
+        """
         b, *_, device = *x.shape, x.device
         batched_times = torch.full((x.shape[0],), t, device=x.device, dtype=torch.long)
         model_mean, _, model_log_variance, x_start = self.p_mean_variance(
             x=x,
+            init_state=init_state,
             t=batched_times,
             cond_vecs=cond_vecs,
             cond_scale=cond_scale,
             clip_denoised=clip_denoised,
         )
         noise = torch.randn_like(x) if t > 0 else 0.0  # no noise if t == 0
-        pred_img = model_mean + (0.5 * model_log_variance).exp() * noise
+        pred_img = model_mean + (0.5 * model_log_variance).exp() * noise # TODO: add STL guidance term here
+        # pred_traj = model_mean + (0.5 * model_log_variance).exp() * noise + stl_formula(model_mean).grad
         return pred_img, x_start
 
     @torch.no_grad()
-    def p_sample_loop(self, cond_vecs, shape, cond_scale=3.0):
-        batch, device = shape[0], self.betas.device
+    def sample(self, init_states, cond_vecs, cond_scale=3.0):
+        batch = cond_vecs.shape[0]
+        # TODO: could make seqlen arg to sample() since it doesn't depend on training
+        seq_length = self.seq_length
+        channels = self.channels
 
-        img = torch.randn(shape, device=device)
+        shape = (batch, channels, seq_length)
+        device = self.betas.device
+        traj = torch.randn(shape, device=device)
 
         x_start = None
 
@@ -555,94 +582,10 @@ class GaussianDiffusion1D(nn.Module):
             desc="sampling loop time step",
             total=self.num_timesteps,
         ):
-            img, x_start = self.p_sample(img, t, cond_vecs, cond_scale)
+            traj, x_start = self.p_sample(traj, init_states, t, cond_vecs, cond_scale)
 
-        img = unnormalize_to_zero_to_one(img)
-        return img
-
-    @torch.no_grad()
-    def ddim_sample(self, cond_vecs, shape, cond_scale=3.0, clip_denoised=True):
-        batch, device, total_timesteps, sampling_timesteps, eta, objective = (
-            shape[0],
-            self.betas.device,
-            self.num_timesteps,
-            self.sampling_timesteps,
-            self.ddim_sampling_eta,
-            self.objective,
-        )
-
-        times = torch.linspace(
-            -1, total_timesteps - 1, steps=sampling_timesteps + 1
-        )  # [-1, 0, 1, 2, ..., T-1] when sampling_timesteps == total_timesteps
-        times = list(reversed(times.int().tolist()))
-        time_pairs = list(
-            zip(times[:-1], times[1:])
-        )  # [(T-1, T-2), (T-2, T-3), ..., (1, 0), (0, -1)]
-
-        img = torch.randn(shape, device=device)
-
-        x_start = None
-
-        for time, time_next in tqdm(time_pairs, desc="sampling loop time step"):
-            time_cond = torch.full((batch,), time, device=device, dtype=torch.long)
-            pred_noise, x_start, *_ = self.model_predictions(
-                img,
-                time_cond,
-                cond_vecs,
-                cond_scale=cond_scale,
-                clip_x_start=clip_denoised,
-            )
-
-            if time_next < 0:
-                img = x_start
-                continue
-
-            alpha = self.alphas_cumprod[time]
-            alpha_next = self.alphas_cumprod[time_next]
-
-            sigma = (
-                eta * ((1 - alpha / alpha_next) * (1 - alpha_next) / (1 - alpha)).sqrt()
-            )
-            c = (1 - alpha_next - sigma**2).sqrt()
-
-            noise = torch.randn_like(img)
-
-            img = x_start * alpha_next.sqrt() + c * pred_noise + sigma * noise
-
-        img = unnormalize_to_zero_to_one(img)
-        return img
-
-    @torch.no_grad()
-    def sample(self, cond_vecs, cond_scale=3.0):
-        batch_size, seq_length, channels = (
-            cond_vecs.shape[0],
-            self.seq_length,
-            self.channels,
-        )
-        sample_fn = (
-            self.p_sample_loop if not self.is_ddim_sampling else self.ddim_sample
-        )
-        return sample_fn(cond_vecs, (batch_size, channels, seq_length), cond_scale)
-
-    @torch.no_grad()
-    def interpolate(self, x1, x2, t=None, lam=0.5):
-        b, *_, device = *x1.shape, x1.device
-        t = default(t, self.num_timesteps - 1)
-
-        assert x1.shape == x2.shape
-
-        t_batched = torch.stack([torch.tensor(t, device=device)] * b)
-        xt1, xt2 = map(lambda x: self.q_sample(x, t=t_batched), (x1, x2))
-
-        img = (1 - lam) * xt1 + lam * xt2
-        for i in tqdm(
-            reversed(range(0, t)), desc="interpolation sample time step", total=t
-        ):
-            img = self.p_sample(
-                img, torch.full((b,), i, device=device, dtype=torch.long)
-            )
-
-        return img
+        traj = unnormalize_to_zero_to_one(traj)
+        return traj
 
     def q_sample(self, x_start, t, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
@@ -661,7 +604,7 @@ class GaussianDiffusion1D(nn.Module):
         else:
             raise ValueError(f"invalid loss type {self.loss_type}")
 
-    def p_losses(self, x_start, t, *, cond_vecs, noise=None):
+    def p_losses(self, x_start, t, *, init_states, cond_vecs, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
 
         # noise sample
@@ -670,7 +613,7 @@ class GaussianDiffusion1D(nn.Module):
 
         # predict and take gradient step
 
-        model_out = self.model(x, t, cond_vecs)
+        model_out = self.model(x, init_states, t, cond_vecs)
 
         if self.objective == "pred_noise":
             target = noise
@@ -686,37 +629,9 @@ class GaussianDiffusion1D(nn.Module):
         return loss.mean()
 
     def forward(self, seq, *args, **kwargs):
-        device = seq.device
-        seq_length = self.seq_length
         b, c, n = seq.shape
-        assert n == seq_length, f"seq length must be {seq_length}"
-        t = torch.randint(0, self.num_timesteps, (b,), device=device).long()
+        assert n == self.seq_length, f"seq length must be {self.seq_length}"
+        t = torch.randint(0, self.num_timesteps, (b,), device=seq.device).long()
 
         seq = normalize_to_neg_one_to_one(seq)
         return self.p_losses(seq, t, *args, **kwargs)
-
-
-if __name__ == "__main__":
-    # run pipeline end to end to ensure no errors
-    traj_len = 160
-    param_len = 13
-
-    batch_size = 32
-
-    model = Unet1D(
-        dim=64,
-        cond_dim=param_len,
-        channels=1,
-    )
-
-    diffusion = GaussianDiffusion1D(model, seq_length=traj_len)
-
-    training_seqs = torch.randn(batch_size, 1, traj_len)
-    cond_vecs = torch.randn(batch_size, param_len)
-
-    loss = diffusion(training_seqs, cond_vecs=cond_vecs)
-    loss.backward()
-
-    sampled_trajs = diffusion.sample(cond_vecs=cond_vecs, cond_scale=3.0)
-
-    print(sampled_trajs.shape)
