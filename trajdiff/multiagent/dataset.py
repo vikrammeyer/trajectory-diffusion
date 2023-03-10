@@ -72,6 +72,19 @@ class MultiAgentDataset(torch.utils.data.Dataset):
 
         return self.transforms(trajectories)
 
+
+def unnormalize_0_to_1(trajectories, cfg):
+    n_agents, traj_steps, _  = trajectories.shape
+    xmin = torch.ones(traj_steps) * cfg.xmin
+    xmax = torch.ones(traj_steps) * cfg.xmax
+    ymin = torch.ones(traj_steps) * cfg.ymin
+    ymax = torch.ones(traj_steps) * cfg.ymax
+
+    mintraj = torch.stack([xmin, ymin]).T.repeat(n_agents, 1, 1)
+    maxtraj = torch.stack([xmax, ymax]).T.repeat(n_agents, 1, 1)
+    print(trajectories.shape,maxtraj.shape, mintraj.shape)
+    return trajectories * (maxtraj - mintraj) + mintraj
+
 if __name__ == '__main__':
     from trajdiff.multiagent import cfg
     ds = MultiAgentDataset('data/multiagent/test', cfg)

@@ -9,8 +9,6 @@ from tqdm.auto import tqdm
 
 from trajdiff.diffusion.diffusion_utils import *
 
-# small helper modules
-
 
 class Residual(nn.Module):
     def __init__(self, fn):
@@ -78,9 +76,6 @@ class PreNorm(nn.Module):
     def forward(self, x):
         x = self.norm(x)
         return self.fn(x)
-
-
-# building block modules
 
 
 class Block(nn.Module):
@@ -189,9 +184,6 @@ class Attention(nn.Module):
 
         out = rearrange(out, "b h n d -> b (h d) n")
         return self.to_out(out)
-
-
-# model
 
 
 class Unet1D(nn.Module):
@@ -552,18 +544,15 @@ class GaussianDiffusion1D(nn.Module):
         batch_size = n_agents
         # default to seq length the model was trained with but can pass in different lengths
         seq_length = default(custom_seq_len, self.seq_length)
-
+        device = cond_vec.device
         shape = (batch_size, self.channels, seq_length)
-        device = self.betas.device
         traj = torch.randn(shape, device=device)
 
-        init_states = cond_vec[0, :, -1, :]
-        logging.info('init states %s', init_states)
-
+        init_states = cond_vec[:, -1, :]
         # TODO: figure out how to only pass 1 instance of the history through
         # the set encoder and reuse for all samples in the batch
         # allows reuse for all agents AND all timesteps (big speed efficiency increase)
-        batched_cond_vecs = repeat(cond_vec, 'n_agents traj_steps state_dim -> n_agents n_agents traj_steps state_dim')
+        batched_cond_vecs = repeat(cond_vec, 'n_agents traj_steps state_dim -> batch n_agents traj_steps state_dim', batch=batch_size)
 
         for t in tqdm(
             reversed(range(0, self.num_timesteps)),
